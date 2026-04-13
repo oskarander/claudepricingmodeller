@@ -330,18 +330,30 @@ const state = {
 };
 
 const revenueBaseline = [
-  { name:'Vuxen enkel',           type:'adult',     trip:'ow', price:340, vol:700000 },
-  { name:'Vuxen tur & retur',     type:'adult',     trip:'rt', price:640, vol:430000 },
-  { name:'Ungdom enkel (18–25)',   type:'youth',     trip:'ow', price:160, vol:95000 },
-  { name:'Ungdom tur & retur',     type:'youth',     trip:'rt', price:320, vol:70000 },
-  { name:'Barn enkel (8–17)',      type:'childFree', trip:'ow', price:160, vol:65000 },
-  { name:'Barn tur & retur (8–17)',type:'childFree', trip:'rt', price:320, vol:45000 },
-  { name:'Pensionär enkel',       type:'pensioner', trip:'ow', price:210, vol:90000 },
-  { name:'Pensionär tur & retur', type:'pensioner', trip:'rt', price:420, vol:65000 },
-  { name:'Resepott 12 resor',     type:'pass',      trip:'ow', price:3670, vol:18000 },
-  { name:'Resepott 24 resor',     type:'pass',      trip:'ow', price:6530, vol:9500 },
-  { name:'Personalkort 30 dagar', type:'pass',      trip:'ow', price:1580, vol:22000 },
-  { name:'Personalkort 20 resor', type:'pass',      trip:'ow', price:1460, vol:6500 },
+  { name:'Vuxen enkel',           type:'adult',     trip:'ow', price:340, vol:570000 },
+  { name:'Vuxen tur & retur',     type:'adult',     trip:'rt', price:640, vol:345000 },
+  { name:'Barn/Ungdom enkel',     type:'youth',     trip:'ow', price:160, vol:95000 },
+  { name:'Ungdom tur & retur',    type:'youth',     trip:'rt', price:320, vol:70000 },
+  { name:'Pensionär enkel',      type:'pensioner', trip:'ow', price:210, vol:90000 },
+  { name:'Pensionär tur & retur',type:'pensioner', trip:'rt', price:420, vol:65000 },
+  { name:'2 för',    type:'group', trip:'ow', price:460,  vol:40000, g:2 },
+  { name:'3 för',    type:'group', trip:'ow', price:580,  vol:15000, g:3 },
+  { name:'4 för',    type:'group', trip:'ow', price:700,  vol:10000, g:4 },
+  { name:'5 för',    type:'group', trip:'ow', price:820,  vol:5000,  g:5 },
+  { name:'6 för',    type:'group', trip:'ow', price:940,  vol:2500,  g:6 },
+  { name:'7 för',    type:'group', trip:'ow', price:1060, vol:1200,  g:7 },
+  { name:'8 för',    type:'group', trip:'ow', price:1180, vol:600,   g:8 },
+  { name:'2 för, Retur', type:'group', trip:'rt', price:920,  vol:30000, g:2 },
+  { name:'3 för, Retur', type:'group', trip:'rt', price:1160, vol:12000, g:3 },
+  { name:'4 för, Retur', type:'group', trip:'rt', price:1400, vol:7500,  g:4 },
+  { name:'5 för, Retur', type:'group', trip:'rt', price:1640, vol:3500,  g:5 },
+  { name:'6 för, Retur', type:'group', trip:'rt', price:1880, vol:1800,  g:6 },
+  { name:'7 för, Retur', type:'group', trip:'rt', price:2120, vol:900,   g:7 },
+  { name:'8 för, Retur', type:'group', trip:'rt', price:2360, vol:450,   g:8 },
+  { name:'Resepott 12 resor',    type:'pass', trip:'ow', price:3670, vol:18000 },
+  { name:'Resepott 24 resor',    type:'pass', trip:'ow', price:6530, vol:9500 },
+  { name:'Personalkort 30 dagar',type:'pass', trip:'ow', price:1580, vol:22000 },
+  { name:'Personalkort 20 resor',type:'pass', trip:'ow', price:1460, vol:6500 },
 ];
 
 const campaignEstimates = [
@@ -574,10 +586,9 @@ function toggleRevDetail() {
 
 function getNewPrice(prod) {
   if (prod.type === 'pass') return prod.price;
-  if (prod.type === 'childFree') return 0;
   const p = state.pricing.oneWay;
   const disc = state.features.returnTripDiscount ? state.pricing.roundTripDiscount : 0;
-  const ow = prod.type === 'group2' ? p.groups[2] : (p[prod.type] || p.adult);
+  const ow = prod.type === 'group' ? p.groups[prod.g] : (p[prod.type] || p.adult);
   return prod.trip === 'rt' ? Math.round(ow * 2 * (1 - disc / 100)) : ow;
 }
 
@@ -589,7 +600,6 @@ function calcRevenueImpact() {
     const newPrice = getNewPrice(prod);
     let newVol;
     if (prod.type === 'pass') newVol = prod.vol;
-    else if (prod.type === 'childFree') newVol = Math.round(prod.vol * 1.1);
     else {
       const pctChange = (newPrice - prod.price) / prod.price;
       newVol = Math.round(prod.vol * (1 + pctChange * e));
@@ -666,13 +676,11 @@ function renderRevenueImpact() {
   r.products.forEach(p => {
     const priceDelta = p.newPrice - p.price;
     const revDelta = p.newRev - p.oldRev;
-    const isFree = p.type === 'childFree';
     const isPass = p.type === 'pass';
-    const newPriceLabel = isFree ? '<em style="color:#2A6A2A;">Free*</em>' : fmt(p.newPrice);
-    const deltaLabel = isPass ? '—' : isFree ? `<span class="neg">−${fmt(p.price)}</span>` : `<span class="${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</span>`;
-    tableHtml += `<tr${isFree ? ' style="background:#FFF0F0;"' : isPass ? ' style="opacity:0.5;"' : ''}>
-      <td>${p.name}${isFree ? ' <em style="font-size:9px;color:#888;">free w/ adult</em>' : ''}</td>
-      <td class="r">${fmt(p.price)}</td><td class="r">${newPriceLabel}</td><td class="r">${deltaLabel}</td>
+    const deltaLabel = isPass ? '—' : `<span class="${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</span>`;
+    tableHtml += `<tr${isPass ? ' style="opacity:0.5;"' : ''}>
+      <td>${p.name}</td>
+      <td class="r">${fmt(p.price)}</td><td class="r">${fmt(p.newPrice)}</td><td class="r">${deltaLabel}</td>
       <td class="r">${fmtK(p.vol)}</td><td class="r">${fmtK(p.newVol)}</td>
       <td class="r ${clsPN(revDelta)}">${revDelta >= 0 ? '+' : ''}${fmtM(revDelta)}</td></tr>`;
   });
