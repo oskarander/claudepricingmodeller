@@ -141,6 +141,35 @@
   .feat-switch.on { background: var(--dark-bg); }
   .feat-switch.on::after { transform: translateX(20px); }
   .config-section.dimmed { opacity: 0.38; pointer-events: none; }
+  .config-section.revenue-impact { background: #FFF8F0; border-color: #E8D0B0; }
+  .section-title.amber { color: #7A3B10; }
+  .section-desc.amber { color: #9A5A2A; }
+  .rev-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+  .rev-card { background: white; border-radius: 12px; padding: 14px; text-align: center; border: 1px solid #E4E4EA; }
+  .rev-card-value { font-size: 20px; font-weight: 800; margin-bottom: 2px; }
+  .rev-card-value.pos { color: #2A6A2A; }
+  .rev-card-value.neg { color: #C62828; }
+  .rev-card-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+  .rev-card-sub { font-size: 11px; color: #999; margin-top: 3px; }
+  .rev-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 12px; }
+  .rev-table th { text-align: left; font-weight: 700; color: var(--text-muted); padding: 6px 8px; border-bottom: 2px solid #E4E4EA; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .rev-table td { padding: 5px 8px; border-bottom: 1px solid #F0F0F4; font-variant-numeric: tabular-nums; }
+  .rev-table .r { text-align: right; }
+  .rev-table .pos { color: #2A6A2A; font-weight: 600; }
+  .rev-table .neg { color: #C62828; font-weight: 600; }
+  .rev-table tr.campaign-row { background: #F0FFF0; }
+  .rev-table tr.total-row { font-weight: 700; border-top: 2px solid #E4E4EA; }
+  .rev-table tr.total-row td { padding-top: 8px; }
+  .rev-detail-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); background: none; border: none; cursor: pointer; font-family: inherit; margin-top: 12px; }
+  .rev-detail-toggle svg { transition: transform 0.2s; }
+  .rev-detail-toggle.open svg { transform: rotate(180deg); }
+  .rev-detail-wrap { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+  .rev-detail-wrap.open { max-height: 800px; }
+  .rev-slider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .rev-slider-label { font-size: 12px; font-weight: 600; color: var(--dark-bg); min-width: 180px; }
+  .rev-slider-value { font-size: 14px; font-weight: 800; color: var(--dark-bg); min-width: 44px; text-align: right; }
+  .rev-slider-row input[type=range] { background: #E8D0B0; }
+  .placeholder-badge { display: inline-block; font-size: 9px; font-weight: 700; color: #9A5A2A; background: #FFE8CC; padding: 2px 8px; border-radius: 100px; margin-left: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
   @media (max-width: 960px) {
     .layout { flex-direction: column; }
     .panel-left { width: 100%; min-width: 0; padding: 24px 16px; }
@@ -238,6 +267,19 @@
       <div class="section-subtitle green" style="margin-top:8px;">Adult group pricing</div>
       <div class="group-grid" id="calc-groups"></div>
     </div>
+    <div class="config-section revenue-impact">
+      <div class="section-title amber">Revenue Impact Estimate <span class="placeholder-badge">Placeholder data</span></div>
+      <div class="section-desc amber">Projected annual effect of the new pricing model vs current (2025 baseline ~800M SEK). Adjust elasticity and cannibalization assumptions.</div>
+      <div id="rev-sliders"></div>
+      <div id="rev-summary"></div>
+      <button class="rev-detail-toggle" id="rev-detail-btn" onclick="toggleRevDetail()">
+        Show product breakdown
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div class="rev-detail-wrap" id="rev-detail-wrap">
+        <div id="rev-table-container"></div>
+      </div>
+    </div>
   </div>
 </div>
 <script>
@@ -283,8 +325,27 @@ const state = {
       adult:340, earlyBird:170, summerCampaign:170, pensioner:170, youth:170, child:170,
       groups: { 2:510, 3:680, 4:850, 5:1020, 6:1190, 7:1360, 8:1530 }
     }
-  }
+  },
+  revenueModel: { elasticity: -0.3, cannibalization: 0.4 }
 };
+
+const revenueBaseline = [
+  { name:'Adult One-way',     type:'adult',     trip:'ow', price:300, vol:800000 },
+  { name:'Adult Return',      type:'adult',     trip:'rt', price:540, vol:580000 },
+  { name:'Youth One-way',     type:'youth',     trip:'ow', price:150, vol:130000 },
+  { name:'Youth Return',      type:'youth',     trip:'rt', price:270, vol:100000 },
+  { name:'Pensioner One-way', type:'pensioner', trip:'ow', price:150, vol:105000 },
+  { name:'Pensioner Return',  type:'pensioner', trip:'rt', price:270, vol:82000 },
+  { name:'Child One-way',     type:'child',     trip:'ow', price:150, vol:72000 },
+  { name:'Child Return',      type:'child',     trip:'rt', price:270, vol:52000 },
+  { name:'Group (2) One-way', type:'group2',    trip:'ow', price:450, vol:125000 },
+  { name:'Group (2) Return',  type:'group2',    trip:'rt', price:810, vol:100000 },
+];
+
+const campaignEstimates = [
+  { name:'Early Bird', feature:'earlyBird', type:'earlyBird', estVol:80000 },
+  { name:'Summer Campaign', feature:'summerCampaign', type:'summerCampaign', estVol:60000 },
+];
 
 function setTripType(t) { state.tripType = t; render(); }
 function updatePassenger(type, delta) { const v = state.passengers[type] + delta; if (v >= 0) { state.passengers[type] = v; render(); } }
@@ -397,7 +458,7 @@ function renderBreakdown() {
     <div class="breakdown-total-row"><span class="breakdown-total-label">Total</span><span class="breakdown-total-value">${fmt(total)} SEK</span></div></div>`;
 }
 
-function render() { renderFeatureToggles(); renderToggle(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); }
+function render() { renderFeatureToggles(); renderToggle(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); renderRevenueImpact(); }
 
 const featureToggleIds = { returnTripDiscount:'feat-rt-discount', earlyBird:'feat-early-bird', summerCampaign:'feat-summer-campaign' };
 function renderFeatureToggles() {
@@ -497,6 +558,123 @@ function renderCalcPrices() {
     <label class="green">${s} adults</label>
     <div class="calc-value">${calcRT(state.pricing.oneWay.groups[s])} SEK</div>
     <div class="coupon-tag green">${s * 2} coupons</div></div>`).join('');
+}
+
+function updateElasticity(v) { state.revenueModel.elasticity = Number(v); render(); }
+function updateCannibalization(v) { state.revenueModel.cannibalization = Number(v); render(); }
+
+let revDetailOpen = false;
+function toggleRevDetail() {
+  revDetailOpen = !revDetailOpen;
+  $('rev-detail-btn').classList.toggle('open', revDetailOpen);
+  $('rev-detail-wrap').classList.toggle('open', revDetailOpen);
+}
+
+function getNewPrice(type, trip) {
+  const p = state.pricing.oneWay;
+  const disc = state.features.returnTripDiscount ? state.pricing.roundTripDiscount : 0;
+  const ow = type === 'group2' ? p.groups[2] : (p[type] || p.adult);
+  return trip === 'rt' ? Math.round(ow * 2 * (1 - disc / 100)) : ow;
+}
+
+function calcRevenueImpact() {
+  const e = state.revenueModel.elasticity;
+  const cannib = state.revenueModel.cannibalization;
+
+  const products = revenueBaseline.map(prod => {
+    const newPrice = getNewPrice(prod.type, prod.trip);
+    const pctChange = (newPrice - prod.price) / prod.price;
+    const newVol = Math.round(prod.vol * (1 + pctChange * e));
+    return { ...prod, newPrice, newVol, oldRev: prod.price * prod.vol, newRev: newPrice * newVol };
+  });
+
+  const campaigns = campaignEstimates.filter(c => state.features[c.feature]).map(c => {
+    const price = state.pricing.oneWay[c.type];
+    const fullPrice = state.pricing.oneWay.adult;
+    const netNew = Math.round(c.estVol * (1 - cannib));
+    const netRev = c.estVol * price - c.estVol * cannib * fullPrice;
+    return { ...c, price, netNew, netRev };
+  });
+
+  const oldRev = products.reduce((s, p) => s + p.oldRev, 0);
+  const newProdRev = products.reduce((s, p) => s + p.newRev, 0);
+  const campRev = campaigns.reduce((s, c) => s + c.netRev, 0);
+  const oldVol = products.reduce((s, p) => s + p.vol, 0);
+  const newProdVol = products.reduce((s, p) => s + p.newVol, 0);
+  const campVol = campaigns.reduce((s, c) => s + c.netNew, 0);
+
+  return {
+    products, campaigns,
+    oldRev, newRev: newProdRev + campRev, revDelta: (newProdRev - oldRev) + campRev,
+    oldVol, newVol: newProdVol + campVol, volDelta: (newProdVol - oldVol) + campVol
+  };
+}
+
+const fmtM = n => `${(n / 1e6).toFixed(1)}M`;
+const fmtK = n => `${(n / 1e3).toFixed(1)}K`;
+const fmtPct = (n, d) => d !== 0 ? `${n > 0 ? '+' : ''}${(n / d * 100).toFixed(1)}%` : '0%';
+const clsPN = n => n >= 0 ? 'pos' : 'neg';
+
+function renderRevenueImpact() {
+  const r = calcRevenueImpact();
+  const el = state.revenueModel.elasticity;
+  const cn = state.revenueModel.cannibalization;
+  const oldRPT = r.oldVol > 0 ? Math.round(r.oldRev / r.oldVol) : 0;
+  const newRPT = r.newVol > 0 ? Math.round(r.newRev / r.newVol) : 0;
+
+  $('rev-sliders').innerHTML = `
+    <div class="rev-slider-row">
+      <span class="rev-slider-label">Price elasticity</span>
+      <input type="range" min="-0.8" max="-0.05" step="0.05" value="${el}" oninput="updateElasticity(this.value)">
+      <span class="rev-slider-value">${el.toFixed(2)}</span>
+    </div>
+    <div class="rev-slider-row">
+      <span class="rev-slider-label">Campaign cannibalization</span>
+      <input type="range" min="0" max="0.9" step="0.05" value="${cn}" oninput="updateCannibalization(this.value)">
+      <span class="rev-slider-value">${Math.round(cn * 100)}%</span>
+    </div>`;
+
+  $('rev-summary').innerHTML = `<div class="rev-summary">
+    <div class="rev-card">
+      <div class="rev-card-value ${clsPN(r.revDelta)}">${r.revDelta >= 0 ? '+' : ''}${fmtM(r.revDelta)} SEK</div>
+      <div class="rev-card-label">Revenue impact</div>
+      <div class="rev-card-sub">${fmtM(r.oldRev)} → ${fmtM(r.newRev)} (${fmtPct(r.revDelta, r.oldRev)})</div>
+    </div>
+    <div class="rev-card">
+      <div class="rev-card-value ${clsPN(r.volDelta)}">${r.volDelta >= 0 ? '+' : ''}${fmtK(r.volDelta)}</div>
+      <div class="rev-card-label">Traveller impact</div>
+      <div class="rev-card-sub">${fmtK(r.oldVol)} → ${fmtK(r.newVol)} (${fmtPct(r.volDelta, r.oldVol)})</div>
+    </div>
+    <div class="rev-card">
+      <div class="rev-card-value ${clsPN(newRPT - oldRPT)}">${oldRPT} → ${newRPT} SEK</div>
+      <div class="rev-card-label">Revenue / traveller</div>
+      <div class="rev-card-sub">${fmtPct(newRPT - oldRPT, oldRPT)} per journey</div>
+    </div>
+  </div>`;
+
+  let tableHtml = `<table class="rev-table">
+    <tr><th>Product</th><th class="r">Current price</th><th class="r">New price</th><th class="r">Δ Price</th><th class="r">Vol (current)</th><th class="r">Vol (new)</th><th class="r">Δ Rev</th></tr>`;
+  r.products.forEach(p => {
+    const priceDelta = p.newPrice - p.price;
+    const revDelta = p.newRev - p.oldRev;
+    tableHtml += `<tr>
+      <td>${p.name}</td><td class="r">${fmt(p.price)}</td><td class="r">${fmt(p.newPrice)}</td>
+      <td class="r ${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</td>
+      <td class="r">${fmtK(p.vol)}</td><td class="r">${fmtK(p.newVol)}</td>
+      <td class="r ${clsPN(revDelta)}">${revDelta >= 0 ? '+' : ''}${fmtM(revDelta)}</td></tr>`;
+  });
+  r.campaigns.forEach(c => {
+    tableHtml += `<tr class="campaign-row">
+      <td>${c.name} (new)</td><td class="r">—</td><td class="r">${fmt(c.price)}</td>
+      <td class="r">—</td><td class="r">+${fmtK(c.netNew)}</td><td class="r">+${fmtK(c.netNew)}</td>
+      <td class="r ${clsPN(c.netRev)}">${c.netRev >= 0 ? '+' : ''}${fmtM(c.netRev)}</td></tr>`;
+  });
+  tableHtml += `<tr class="total-row">
+    <td>Total</td><td class="r">${fmtM(r.oldRev)}</td><td class="r">${fmtM(r.newRev)}</td>
+    <td class="r ${clsPN(r.revDelta)}">${r.revDelta >= 0 ? '+' : ''}${fmtM(r.revDelta)}</td>
+    <td class="r">${fmtK(r.oldVol)}</td><td class="r">${fmtK(r.newVol)}</td>
+    <td class="r ${clsPN(r.revDelta)}">${fmtPct(r.revDelta, r.oldRev)}</td></tr></table>`;
+  $('rev-table-container').innerHTML = tableHtml;
 }
 
 render();
