@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEX Pricing Engine v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --yellow: #F5F06A;
+    --dark-bg: #2E2D38;
+    --white: #FFFFFF;
+    --off-white: #F5F5F0;
+    --green-bg: #EDF7ED;
+    --green-border: #B8DEB8;
+    --green-text: #2A6A2A;
+    --text-muted: #666677;
+    --border-light: #E4E4EA;
+    --shadow-elevated: 0 8px 40px rgba(0,0,0,0.28);
+  }
+  body { font-family: 'Figtree', 'Helvetica Neue', Arial, sans-serif; background: var(--off-white); color: var(--dark-bg); min-height: 100vh; display: flex; flex-direction: column; }
+  .layout { display: flex; flex: 1; min-height: 100vh; }
+  .panel-left { width: 480px; min-width: 480px; background: #1E1D28; display: flex; align-items: center; justify-content: center; padding: 32px 24px; }
+  .panel-right { flex: 1; background: var(--white); overflow-y: auto; padding: 40px 44px; border-left: 1px solid var(--border-light); }
+  .phone-frame { width: 375px; height: 812px; background: var(--dark-bg); border-radius: 44px; border: 8px solid #0e0d18; box-shadow: var(--shadow-elevated), 0 0 0 1px #3a3947; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  .phone-frame::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 120px; height: 28px; background: #0e0d18; border-radius: 0 0 20px 20px; z-index: 20; }
+  .phone-scroll { flex: 1; overflow-y: auto; padding: 16px 12px 160px; scrollbar-width: none; }
+  .phone-scroll::-webkit-scrollbar { display: none; }
+  .ticket-card { background: var(--white); border-radius: 20px; overflow: hidden; }
+  .trip-toggle-wrap { padding: 12px; background: var(--white); }
+  .trip-toggle { background: var(--dark-bg); border-radius: 100px; padding: 4px; display: flex; position: relative; }
+  .toggle-indicator { position: absolute; top: 4px; bottom: 4px; width: calc(50% - 4px); background: var(--white); border-radius: 100px; transition: left 0.25s cubic-bezier(.4,0,.2,1); left: 4px; }
+  .toggle-btn { flex: 1; padding: 10px 0; background: transparent; border: none; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; position: relative; z-index: 1; transition: color 0.2s; border-radius: 100px; }
+  .toggle-btn.active { color: var(--dark-bg); }
+  .toggle-btn.inactive { color: rgba(255,255,255,0.75); }
+  .rt-badge { position: absolute; top: -10px; right: 4px; background: #EDFAED; color: #1A5C1A; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 100px; border: 2px solid var(--dark-bg); white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2); animation: bounce 2.5s ease-in-out infinite; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+  .passenger-list { padding: 4px 12px 0; }
+  .passenger-row { padding: 14px 0; border-bottom: 1px solid #F0F0F4; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .passenger-row:last-child { border-bottom: none; }
+  .pax-info { flex: 1; min-width: 0; }
+  .pax-name { font-size: 15px; font-weight: 700; color: var(--dark-bg); }
+  .pax-price-line { display: flex; align-items: center; gap: 6px; margin-top: 1px; flex-wrap: wrap; }
+  .pax-price { font-size: 14px; font-weight: 600; color: var(--dark-bg); }
+  .pax-price-original { font-size: 13px; color: #AAA; text-decoration: line-through; }
+  .pax-discount-badge { background: #EDFAED; color: #2A6A2A; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+  .pax-age { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .pax-note { font-size: 11px; color: var(--text-muted); margin-top: 3px; line-height: 1.3; }
+  .pax-adult-hint { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 11px; color: #1A5C1A; background: #EDFAED; padding: 3px 8px; border-radius: 100px; white-space: nowrap; }
+  .pax-adult-hint strong { font-weight: 800; }
+  .passenger-row.campaign-type { margin: 0 -12px; padding: 14px 12px; border-radius: 0; }
+  .passenger-row.earlybird { background: #FFFCE8; }
+  .passenger-row.earlybird .pax-name { color: #4A3F00; }
+  .passenger-row.earlybird .pax-price { color: #4A3F00; }
+  .passenger-row.earlybird .pax-age { color: #7A6A00; }
+  .passenger-row.earlybird .pax-btn.enabled { background: var(--dark-bg); color: var(--yellow); }
+  .passenger-row.summer { background: #FFF4E8; }
+  .passenger-row.summer .pax-name { color: #5C2D00; }
+  .passenger-row.summer .pax-price { color: #5C2D00; }
+  .passenger-row.summer .pax-age { color: #8A4A00; }
+  .passenger-row.summer .pax-btn.enabled { background: var(--dark-bg); color: #F5A623; }
+  .campaign-date-row { margin: 0 -12px; padding: 2px 12px 16px; }
+  .campaign-date-row.earlybird { background: #FFFCE8; }
+  .campaign-date-row.summer { background: #FFF4E8; }
+  .eb-date-heading { font-size: 15px; font-weight: 800; color: var(--dark-bg); margin-bottom: 10px; }
+  .eb-date-inner { display: flex; align-items: center; background: #F2F2F5; border: none; border-radius: 10px; padding: 11px 14px; cursor: pointer; transition: background 0.15s; }
+  .eb-date-inner:hover { background: #EAEAEE; }
+  .eb-date-inner.valid { background: #EDFAED; }
+  .eb-date-inner.invalid { background: #FFF0F0; }
+  .eb-date-status { font-size: 11px; font-weight: 600; color: var(--text-muted); margin-left: 8px; white-space: nowrap; flex-shrink: 0; }
+  .eb-date-status.valid { color: #2A6A2A; }
+  .eb-date-status.invalid { color: #C62828; }
+  .eb-date-input { border: none; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--dark-bg); outline: none; cursor: pointer; flex: 1; }
+  .eb-date-inner.valid .eb-date-input { color: #1A5C1A; }
+  .eb-date-inner.invalid .eb-date-input { color: #C62828; }
+  .pax-controls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .pax-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, transform 0.1s; font-family: inherit; }
+  .pax-btn:active { transform: scale(0.92); }
+  .pax-btn.enabled { background: var(--yellow); color: var(--dark-bg); }
+  .pax-btn.disabled { background: #EEEEF2; color: #AAA; cursor: default; }
+  .pax-count { font-size: 16px; font-weight: 700; color: var(--dark-bg); width: 18px; text-align: center; }
+  .checkout-bar { position: absolute; bottom: 0; left: 0; right: 0; background: var(--white); border-radius: 20px 20px 0 0; padding: 14px 16px 24px; box-shadow: 0 -8px 32px rgba(0,0,0,0.12); }
+  .checkout-details-btn { display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--dark-bg); background: none; border: none; cursor: pointer; width: 100%; margin-bottom: 10px; }
+  .checkout-details-btn svg { transition: transform 0.25s; }
+  .checkout-details-btn.open svg { transform: rotate(180deg); }
+  .price-breakdown { overflow: hidden; max-height: 0; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 0; }
+  .price-breakdown.open { max-height: 300px; opacity: 1; }
+  .breakdown-inner { background: rgba(46,45,56,0.04); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .breakdown-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; color: var(--dark-bg); }
+  .breakdown-row:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .breakdown-label { font-weight: 500; color: var(--text-muted); }
+  .breakdown-value { font-weight: 700; }
+  .breakdown-total-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding-top: 8px; margin-top: 4px; border-top: 1.5px solid rgba(0,0,0,0.1); }
+  .breakdown-total-label { font-weight: 700; }
+  .breakdown-total-value { font-weight: 800; }
+  .checkout-total { text-align: center; margin-bottom: 10px; }
+  .checkout-total-amount { font-size: 28px; font-weight: 800; color: var(--dark-bg); letter-spacing: -0.5px; }
+  .checkout-savings { font-size: 13px; font-weight: 600; color: var(--green-text); margin-top: 2px; }
+  .checkout-btn { width: 100%; background: var(--yellow); color: var(--dark-bg); border: none; border-radius: 14px; padding: 14px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+  .checkout-btn:hover { background: #FAFAA0; }
+  .rp-title { font-size: 26px; font-weight: 800; color: var(--dark-bg); margin-bottom: 6px; letter-spacing: -0.4px; }
+  .chevron { color: var(--yellow); }
+  .rp-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; line-height: 1.5; }
+  .config-section { border-radius: 16px; border: 1px solid var(--border-light); padding: 24px; margin-bottom: 20px; background: var(--off-white); }
+  .config-section.rt-incentive { background: #EEF2FF; border-color: #C7D2FE; }
+  .config-section.rt-calc { background: var(--green-bg); border-color: var(--green-border); }
+  .section-title { font-size: 16px; font-weight: 700; color: var(--dark-bg); margin-bottom: 4px; }
+  .section-title.green { color: var(--green-text); }
+  .section-title.blue { color: #1E3A8A; }
+  .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.45; }
+  .section-desc.blue { color: #3730A3; }
+  .section-desc.green { color: #3A7A3A; }
+  .slider-row { display: flex; align-items: center; gap: 14px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; height: 6px; background: #C7D2FE; border-radius: 100px; outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--dark-bg); cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.25); border: 3px solid white; }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--dark-bg); cursor: pointer; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+  .slider-value { font-size: 20px; font-weight: 800; color: var(--dark-bg); min-width: 52px; text-align: right; }
+  .section-subtitle { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; margin-top: 4px; }
+  .section-subtitle.green { color: #5A8A5A; }
+  .price-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+  .group-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .coupon-tag { display: inline-block; margin-top: 4px; font-size: 10px; font-weight: 700; color: var(--text-muted); background: #EDEDF5; padding: 2px 6px; border-radius: 100px; }
+  .coupon-tag.green { background: #D8EED8; color: #3A7A3A; }
+  .price-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; text-transform: capitalize; }
+  .price-field label.green { color: #5A8A5A; }
+  .price-field input[type=number] { width: 100%; padding: 8px 10px; border: 1.5px solid var(--border-light); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; color: var(--dark-bg); background: var(--white); outline: none; transition: border-color 0.15s; -moz-appearance: textfield; }
+  .price-field input[type=number]::-webkit-inner-spin-button,
+  .price-field input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .price-field input[type=number]:focus { border-color: var(--dark-bg); }
+  .price-field .calc-value { width: 100%; padding: 8px 10px; border: 1.5px solid var(--green-border); border-radius: 10px; font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; color: var(--green-text); background: rgba(255,255,255,0.6); }
+  .config-section.feature-toggles { background: #F8F7FF; border-color: #D8D4F0; }
+  .feat-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .feat-toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .feat-toggle-row:first-of-type { padding-top: 0; }
+  .feat-toggle-info { flex: 1; }
+  .feat-toggle-name { font-size: 14px; font-weight: 700; color: var(--dark-bg); margin-bottom: 2px; }
+  .feat-toggle-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .feat-switch { position: relative; width: 46px; height: 26px; border-radius: 100px; border: none; cursor: pointer; transition: background 0.2s; flex-shrink: 0; background: #D1D5DB; }
+  .feat-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transition: transform 0.2s cubic-bezier(.4,0,.2,1); }
+  .feat-switch.on { background: var(--dark-bg); }
+  .feat-switch.on::after { transform: translateX(20px); }
+  .config-section.dimmed { opacity: 0.38; pointer-events: none; }
+  @media (max-width: 960px) {
+    .layout { flex-direction: column; }
+    .panel-left { width: 100%; min-width: 0; padding: 24px 16px; }
+    .panel-right { padding: 28px 20px; }
+    .price-grid { grid-template-columns: repeat(2, 1fr); }
+    .group-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="panel-left">
+    <div class="phone-frame">
+      <div class="phone-scroll" style="padding-top:0;">
+        <div style="padding: 40px 16px 16px;">
+          <div style="font-size:22px; font-weight:800; color:var(--yellow); line-height:1.2;">How many will travel?</div>
+        </div>
+        <div class="ticket-card">
+          <div class="trip-toggle-wrap">
+            <div class="trip-toggle">
+              <div class="toggle-indicator" id="toggle-indicator"></div>
+              <button class="toggle-btn active" id="btn-oneway" onclick="setTripType('oneWay')">One-way</button>
+              <button class="toggle-btn inactive" id="btn-roundtrip" onclick="setTripType('roundTrip')" style="position:relative;">
+                Round trip
+                <span class="rt-badge" id="rt-badge" style="display:none;"></span>
+              </button>
+            </div>
+          </div>
+          <div class="passenger-list" id="passenger-list"></div>
+        </div>
+      </div>
+      <div class="checkout-bar">
+        <button class="checkout-details-btn" id="details-btn" onclick="toggleBreakdown()">
+          Show details
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
+        </button>
+        <div class="price-breakdown" id="price-breakdown"></div>
+        <div class="checkout-total">
+          <div class="checkout-total-amount" id="total-display">340 SEK</div>
+          <div class="checkout-savings" id="savings-display" style="display:none;"></div>
+        </div>
+        <button class="checkout-btn">Checkout</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel-right">
+    <h2 class="rp-title"><span class="chevron">» </span>Pricing Engine</h2>
+    <p class="rp-subtitle">Adjust base rates and discounts to see the UI reflect changes in real time.</p>
+    <div class="config-section feature-toggles">
+      <div class="section-title">Active Features</div>
+      <div class="section-desc">Toggle products on or off to model different configurations.</div>
+      <div class="feat-toggle-row">
+        <div class="feat-toggle-info">
+          <div class="feat-toggle-name">Return Trip Discount</div>
+          <div class="feat-toggle-desc">Apply % discount when booking round trip</div>
+        </div>
+        <button class="feat-switch on" id="feat-rt-discount" onclick="toggleFeature('returnTripDiscount')"></button>
+      </div>
+      <div class="feat-toggle-row">
+        <div class="feat-toggle-info">
+          <div class="feat-toggle-name">Early Bird</div>
+          <div class="feat-toggle-desc">Show Early Bird product in passenger selection</div>
+        </div>
+        <button class="feat-switch on" id="feat-early-bird" onclick="toggleFeature('earlyBird')"></button>
+      </div>
+      <div class="feat-toggle-row">
+        <div class="feat-toggle-info">
+          <div class="feat-toggle-name">Summer Campaign</div>
+          <div class="feat-toggle-desc">Discounted fare for travel 1 Jul – 31 Jul, no advance booking required</div>
+        </div>
+        <button class="feat-switch on" id="feat-summer-campaign" onclick="toggleFeature('summerCampaign')"></button>
+      </div>
+    </div>
+    <div class="config-section rt-incentive">
+      <div class="section-title blue">Round Trip Incentive</div>
+      <div class="section-desc blue">RT price = (one-way total &times; 2) &minus; discount %. Adjust the slider; all prices update instantly.</div>
+      <div class="slider-row">
+        <input type="range" min="0" max="50" id="discount-slider" value="10" oninput="updateDiscount(this.value)">
+        <div class="slider-value" id="discount-label">10%</div>
+      </div>
+    </div>
+    <div class="config-section">
+      <div class="section-title">Base Pricing &mdash; One-way</div>
+      <div class="section-desc">Edit any field. Changes reflect immediately in the phone UI.</div>
+      <div class="section-subtitle">Per passenger</div>
+      <div class="price-grid" id="editor-base"></div>
+      <div class="section-subtitle" style="margin-top:8px;">Adult group pricing</div>
+      <div class="group-grid" id="editor-groups"></div>
+    </div>
+    <div class="config-section rt-calc">
+      <div class="section-title green">Calculated Round Trip Prices</div>
+      <div class="section-desc green">Read-only. Based on (one-way &times; 2) &minus; <span id="rt-discount-text">10</span>% discount.</div>
+      <div class="section-subtitle green">Per passenger</div>
+      <div class="price-grid" id="calc-base"></div>
+      <div class="section-subtitle green" style="margin-top:8px;">Adult group pricing</div>
+      <div class="group-grid" id="calc-groups"></div>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const groupSizes = [2,3,4,5,6,7,8];
+const SVG_MINUS = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 12H4"/></svg>';
+const SVG_PLUS = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg>';
+
+const passengerConfig = [
+  { type:'earlyBird', label:'Early Bird', age:'Book 14+ days before travel',
+    campaign: { feature:'earlyBird', rowClass:'earlybird', dateKey:'travelDate',
+      validate: () => { const d = daysUntilTravel(); return d !== null && d >= state.pricing.earlybirdDays; },
+      statusText: (valid, hasDate) => {
+        if (valid) return 'Qualifies';
+        if (!hasDate) return '';
+        const r = state.pricing.earlybirdDays - daysUntilTravel();
+        return `${r} day${r !== 1 ? 's' : ''} short`;
+      }}},
+  { type:'summerCampaign', label:'Summer Campaign', age:'Travel: 1 Jul – 31 Jul',
+    campaign: { feature:'summerCampaign', rowClass:'summer', dateKey:'summerDate',
+      validate: () => state.summerDate && new Date(state.summerDate).getMonth() === 6,
+      statusText: (valid, hasDate) => !hasDate ? '' : valid ? 'In July ✓' : 'Not in July' }},
+  { type:'adult',     label:'Adult',     age:'26–65 years' },
+  { type:'pensioner', label:'Pensioner', age:'65+ years' },
+  { type:'youth',     label:'Youth',     age:'18–25 years' },
+  { type:'child',     label:'Child',     age:'0–17 years', note:'Travels free with a paying adult' }
+];
+
+const campaignTypes = passengerConfig.filter(c => c.campaign);
+const paxTypes  = passengerConfig.map(c => c.type);
+const paxLabels = Object.fromEntries(passengerConfig.map(c => [c.type, c.label]));
+
+const state = {
+  tripType: 'oneWay',
+  passengers: Object.fromEntries(paxTypes.map(t => [t, t === 'adult' ? 1 : 0])),
+  travelDate: null,
+  summerDate: null,
+  features: { returnTripDiscount: true, earlyBird: true, summerCampaign: true },
+  pricing: {
+    roundTripDiscount: 10,
+    earlybirdDays: 14,
+    oneWay: {
+      adult:340, earlyBird:170, summerCampaign:170, pensioner:170, youth:170, child:170,
+      groups: { 2:510, 3:680, 4:850, 5:1020, 6:1190, 7:1360, 8:1530 }
+    }
+  }
+};
+
+function setTripType(t) { state.tripType = t; render(); }
+function updatePassenger(type, delta) { const v = state.passengers[type] + delta; if (v >= 0) { state.passengers[type] = v; render(); } }
+function updateDiscount(v) { state.pricing.roundTripDiscount = Number(v); render(); }
+function updateBasePrice(type, v) { state.pricing.oneWay[type] = Number(v); render(); }
+function updateGroupPrice(size, v) { state.pricing.oneWay.groups[size] = Number(v); render(); }
+function updateDate(key, v) { state[key] = v || null; render(); }
+function toggleFeature(name) {
+  state.features[name] = !state.features[name];
+  const cfg = campaignTypes.find(c => c.campaign.feature === name);
+  if (cfg && !state.features[name]) { state.passengers[cfg.type] = 0; state[cfg.campaign.dateKey] = null; }
+  render();
+}
+
+function daysUntilTravel() {
+  if (!state.travelDate) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((new Date(state.travelDate) - today) / 864e5);
+}
+
+function hasPayingAdult() {
+  const p = state.passengers;
+  return p.adult > 0 || p.pensioner > 0 || campaignTypes.some(c => p[c.type] > 0);
+}
+
+function applyGroupPricing(n) {
+  let total = 0, c = n;
+  const g = state.pricing.oneWay.groups;
+  while (c > 0) {
+    if (c >= 8) { total += g[8]; c -= 8; }
+    else if (c >= 2) { total += g[c]; c = 0; }
+    else { total += state.pricing.oneWay.adult; c -= 1; }
+  }
+  return total;
+}
+
+function getDisplayPrices(type, count) {
+  const active = count > 0 ? count : 1;
+  const rawOW = active * state.pricing.oneWay[type];
+  const actualOW = type === 'adult' ? applyGroupPricing(active) : rawOW;
+  let current, original;
+  if (state.tripType === 'oneWay') {
+    current = actualOW; original = actualOW < rawOW ? rawOW : null;
+  } else {
+    const rawRT = rawOW * 2;
+    current = Math.round(actualOW * 2 * (1 - state.pricing.roundTripDiscount / 100));
+    original = rawRT !== current ? rawRT : null;
+  }
+  if (current === original) original = null;
+  const pct = original && original > current ? Math.round((original - current) / original * 100) : 0;
+  return { current, original, pct };
+}
+
+function calculateTotals() {
+  const p = state.pricing.oneWay, pax = state.passengers;
+  let actualOW = applyGroupPricing(pax.adult), rawOW = pax.adult * p.adult;
+  campaignTypes.forEach(c => { actualOW += pax[c.type] * p[c.type]; rawOW += pax[c.type] * p.adult; });
+  actualOW += pax.pensioner * p.pensioner; rawOW += pax.pensioner * p.pensioner;
+  actualOW += pax.youth * p.youth; rawOW += pax.youth * p.youth;
+  rawOW += pax.child * p.child;
+  if (!hasPayingAdult()) actualOW += pax.child * p.child;
+  let total = actualOW, rawTotal = rawOW;
+  if (state.tripType === 'roundTrip') {
+    rawTotal = rawOW * 2;
+    const disc = state.features.returnTripDiscount ? state.pricing.roundTripDiscount : 0;
+    total = Math.round(actualOW * 2 * (1 - disc / 100));
+  }
+  const savings = rawTotal - total;
+  return { total, savings, pct: savings > 0 && rawTotal > 0 ? Math.round(savings / rawTotal * 100) : 0 };
+}
+
+const fmt = n => new Intl.NumberFormat('sv-SE').format(Math.round(n));
+
+let breakdownOpen = false;
+function toggleBreakdown() {
+  breakdownOpen = !breakdownOpen;
+  $('details-btn').classList.toggle('open', breakdownOpen);
+  $('price-breakdown').classList.toggle('open', breakdownOpen);
+  if (breakdownOpen) renderBreakdown();
+}
+
+function renderBreakdown() {
+  const p = state.pricing.oneWay, pax = state.passengers;
+  const isRT = state.tripType === 'roundTrip', disc = state.pricing.roundTripDiscount;
+  const rows = [];
+  campaignTypes.forEach(c => { if (pax[c.type] > 0) rows.push({ label: `${c.label} × ${pax[c.type]}`, value: pax[c.type] * p[c.type] }); });
+  if (pax.adult > 0) {
+    const raw = pax.adult * p.adult, actual = applyGroupPricing(pax.adult);
+    rows.push({ label: pax.adult === 1 ? 'Adult × 1' : `Adults × ${pax.adult} (group)`, value: actual, original: actual < raw ? raw : null });
+  }
+  if (pax.pensioner > 0) rows.push({ label: `Pensioner × ${pax.pensioner}`, value: pax.pensioner * p.pensioner });
+  if (pax.youth > 0) rows.push({ label: `Youth × ${pax.youth}`, value: pax.youth * p.youth });
+  if (pax.child > 0) {
+    const paying = hasPayingAdult();
+    rows.push({ label: `Child × ${pax.child}`, value: paying ? 0 : pax.child * p.child, original: paying ? pax.child * p.child : null });
+  }
+  const owTotal = rows.reduce((s, r) => s + r.value, 0);
+  if (isRT) {
+    rows.push({ label: '× 2 (return)', value: owTotal * 2, separator: true });
+    if (disc > 0 && state.features.returnTripDiscount)
+      rows.push({ label: `Round trip ${disc}% off`, value: -Math.round(owTotal * 2 * disc / 100), discount: true });
+  }
+  const { total } = calculateTotals();
+  $('price-breakdown').innerHTML = `<div class="breakdown-inner">
+    ${rows.map(r => `<div class="breakdown-row" ${r.separator ? 'style="border-top:1.5px solid rgba(0,0,0,0.08);margin-top:4px;padding-top:8px;"' : ''}>
+      <span class="breakdown-label">${r.label}</span>
+      <span class="breakdown-value" ${r.discount ? 'style="color:var(--green-text);"' : ''}>
+        ${r.original ? `<span style="text-decoration:line-through;color:#AAA;font-weight:400;margin-right:4px;">${fmt(r.original)}</span>` : ''}
+        ${r.discount ? '−' : ''}${fmt(Math.abs(r.value))} SEK</span></div>`).join('')}
+    <div class="breakdown-total-row"><span class="breakdown-total-label">Total</span><span class="breakdown-total-value">${fmt(total)} SEK</span></div></div>`;
+}
+
+function render() { renderFeatureToggles(); renderToggle(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); }
+
+const featureToggleIds = { returnTripDiscount:'feat-rt-discount', earlyBird:'feat-early-bird', summerCampaign:'feat-summer-campaign' };
+function renderFeatureToggles() {
+  for (const [key, id] of Object.entries(featureToggleIds)) $(id).className = 'feat-switch' + (state.features[key] ? ' on' : '');
+  const rtOn = state.features.returnTripDiscount;
+  document.querySelector('.config-section.rt-incentive').classList.toggle('dimmed', !rtOn);
+  document.querySelector('.config-section.rt-calc').classList.toggle('dimmed', !rtOn);
+}
+
+function renderToggle() {
+  const isRT = state.tripType === 'roundTrip', disc = state.pricing.roundTripDiscount;
+  $('toggle-indicator').style.left = isRT ? 'calc(50% + 4px)' : '4px';
+  $('btn-oneway').className = 'toggle-btn ' + (isRT ? 'inactive' : 'active');
+  $('btn-roundtrip').className = 'toggle-btn ' + (isRT ? 'active' : 'inactive');
+  const badge = $('rt-badge');
+  if (disc > 0 && state.features.returnTripDiscount) { badge.textContent = `${disc}% off`; badge.style.display = ''; }
+  else badge.style.display = 'none';
+}
+
+function todayStr() { const t = new Date(); t.setHours(0,0,0,0); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; }
+
+function buildDateRow(cfg, count) {
+  if (!cfg.campaign || count <= 0) return '';
+  const c = cfg.campaign, dateVal = state[c.dateKey], valid = c.validate(), hasDate = dateVal !== null;
+  const cls = hasDate ? (valid ? 'valid' : 'invalid') : '';
+  return `<div class="campaign-date-row ${c.rowClass}">
+    <div class="eb-date-heading">When are you travelling?</div>
+    <div class="eb-date-inner ${cls}">
+      <input type="date" class="eb-date-input" value="${dateVal || ''}" min="${todayStr()}" onchange="updateDate('${c.dateKey}',this.value)" onclick="this.showPicker && this.showPicker()">
+      ${hasDate ? `<span class="eb-date-status ${cls}">${c.statusText(valid, hasDate)}</span>` : ''}
+    </div></div>`;
+}
+
+function renderPassengers() {
+  const paying = hasPayingAdult();
+  $('passenger-list').innerHTML = passengerConfig.map(cfg => {
+    if (cfg.campaign && !state.features[cfg.campaign.feature]) return '';
+    const count = state.passengers[cfg.type], prices = getDisplayPrices(cfg.type, count);
+    const isFree = cfg.type === 'child' && paying && count > 0, minusOK = count > 0;
+    let priceHtml = '';
+    if (isFree) {
+      const orig = prices.original || prices.current;
+      if (orig > 0) priceHtml += `<span class="pax-price-original">${fmt(orig)} SEK</span><span class="pax-discount-badge">-100%</span>`;
+      priceHtml += `<span class="pax-price">0 SEK</span>`;
+    } else {
+      if (prices.original && prices.original > prices.current)
+        priceHtml += `<span class="pax-price-original">${fmt(prices.original)} SEK</span><span class="pax-discount-badge">-${prices.pct}%</span>`;
+      priceHtml += `<span class="pax-price">${fmt(prices.current)} SEK</span>`;
+    }
+    const hint = cfg.type === 'adult' ? `<div class="pax-adult-hint"><strong>${state.pricing.oneWay.groups[2] - state.pricing.oneWay.adult} SEK</strong> each additional adult</div>` : '';
+    const rowClass = cfg.campaign ? ` campaign-type ${cfg.campaign.rowClass}` : '';
+    return `<div class="passenger-row${rowClass}">
+      <div class="pax-info">
+        <div class="pax-name">${cfg.label}</div>
+        <div class="pax-price-line">${priceHtml}</div>
+        <div class="pax-age">${cfg.age}</div>${hint}
+        ${cfg.note ? `<div class="pax-note">${cfg.note}</div>` : ''}
+      </div>
+      <div class="pax-controls">
+        <button class="pax-btn ${minusOK ? 'enabled' : 'disabled'}" onclick="updatePassenger('${cfg.type}',-1)" ${minusOK ? '' : 'disabled'}>${SVG_MINUS}</button>
+        <span class="pax-count">${count}</span>
+        <button class="pax-btn enabled" onclick="updatePassenger('${cfg.type}',1)">${SVG_PLUS}</button>
+      </div></div>${buildDateRow(cfg, count)}`;
+  }).join('');
+}
+
+function renderFooter() {
+  const { total, savings, pct } = calculateTotals();
+  $('total-display').textContent = `${fmt(total)} SEK`;
+  const el = $('savings-display');
+  if (savings > 0) { el.textContent = `You save ${fmt(savings)} SEK (-${pct}%)`; el.style.display = ''; }
+  else el.style.display = 'none';
+}
+
+function renderEditor() {
+  const disc = state.pricing.roundTripDiscount;
+  $('discount-slider').value = disc;
+  $('discount-label').textContent = `${disc}%`;
+  $('rt-discount-text').textContent = disc;
+  $('editor-base').innerHTML = paxTypes.map(t => `<div class="price-field">
+    <label>${paxLabels[t]}</label>
+    <input type="number" value="${state.pricing.oneWay[t]}" onchange="updateBasePrice('${t}',this.value)" oninput="updateBasePrice('${t}',this.value)">
+    <div class="coupon-tag">1 coupon</div></div>`).join('');
+  $('editor-groups').innerHTML = groupSizes.map(s => `<div class="price-field">
+    <label>${s} adults</label>
+    <input type="number" value="${state.pricing.oneWay.groups[s]}" onchange="updateGroupPrice(${s},this.value)" oninput="updateGroupPrice(${s},this.value)">
+    <div class="coupon-tag">${s} coupons</div></div>`).join('');
+}
+
+function renderCalcPrices() {
+  const calcRT = v => fmt(Math.round(v * 2 * (1 - state.pricing.roundTripDiscount / 100)));
+  $('calc-base').innerHTML = paxTypes.map(t => `<div class="price-field">
+    <label class="green">${paxLabels[t]}</label>
+    <div class="calc-value">${calcRT(state.pricing.oneWay[t])} SEK</div>
+    <div class="coupon-tag green">2 coupons</div></div>`).join('');
+  $('calc-groups').innerHTML = groupSizes.map(s => `<div class="price-field">
+    <label class="green">${s} adults</label>
+    <div class="calc-value">${calcRT(state.pricing.oneWay.groups[s])} SEK</div>
+    <div class="coupon-tag green">${s * 2} coupons</div></div>`).join('');
+}
+
+render();
+</script>
+</body>
+</html>
