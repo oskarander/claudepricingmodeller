@@ -330,16 +330,18 @@ const state = {
 };
 
 const revenueBaseline = [
-  { name:'Adult One-way',     type:'adult',     trip:'ow', price:300, vol:800000 },
-  { name:'Adult Return',      type:'adult',     trip:'rt', price:540, vol:580000 },
-  { name:'Youth One-way',     type:'youth',     trip:'ow', price:150, vol:130000 },
-  { name:'Youth Return',      type:'youth',     trip:'rt', price:270, vol:100000 },
-  { name:'Pensioner One-way', type:'pensioner', trip:'ow', price:150, vol:105000 },
-  { name:'Pensioner Return',  type:'pensioner', trip:'rt', price:270, vol:82000 },
-  { name:'Child One-way',     type:'child',     trip:'ow', price:150, vol:72000 },
-  { name:'Child Return',      type:'child',     trip:'rt', price:270, vol:52000 },
-  { name:'Group (2) One-way', type:'group2',    trip:'ow', price:450, vol:125000 },
-  { name:'Group (2) Return',  type:'group2',    trip:'rt', price:810, vol:100000 },
+  { name:'Vuxen enkel',           type:'adult',     trip:'ow', price:340, vol:700000 },
+  { name:'Vuxen tur & retur',     type:'adult',     trip:'rt', price:640, vol:430000 },
+  { name:'Ungdom enkel (18–25)',   type:'youth',     trip:'ow', price:160, vol:95000 },
+  { name:'Ungdom tur & retur',     type:'youth',     trip:'rt', price:320, vol:70000 },
+  { name:'Barn enkel (8–17)',      type:'childFree', trip:'ow', price:160, vol:65000 },
+  { name:'Barn tur & retur (8–17)',type:'childFree', trip:'rt', price:320, vol:45000 },
+  { name:'Pensionär enkel',       type:'pensioner', trip:'ow', price:210, vol:90000 },
+  { name:'Pensionär tur & retur', type:'pensioner', trip:'rt', price:420, vol:65000 },
+  { name:'Resepott 12 resor',     type:'pass',      trip:'ow', price:3670, vol:18000 },
+  { name:'Resepott 24 resor',     type:'pass',      trip:'ow', price:6530, vol:9500 },
+  { name:'Personalkort 30 dagar', type:'pass',      trip:'ow', price:1580, vol:22000 },
+  { name:'Personalkort 20 resor', type:'pass',      trip:'ow', price:1460, vol:6500 },
 ];
 
 const campaignEstimates = [
@@ -570,11 +572,13 @@ function toggleRevDetail() {
   $('rev-detail-wrap').classList.toggle('open', revDetailOpen);
 }
 
-function getNewPrice(type, trip) {
+function getNewPrice(prod) {
+  if (prod.type === 'pass') return prod.price;
+  if (prod.type === 'childFree') return 0;
   const p = state.pricing.oneWay;
   const disc = state.features.returnTripDiscount ? state.pricing.roundTripDiscount : 0;
-  const ow = type === 'group2' ? p.groups[2] : (p[type] || p.adult);
-  return trip === 'rt' ? Math.round(ow * 2 * (1 - disc / 100)) : ow;
+  const ow = prod.type === 'group2' ? p.groups[2] : (p[prod.type] || p.adult);
+  return prod.trip === 'rt' ? Math.round(ow * 2 * (1 - disc / 100)) : ow;
 }
 
 function calcRevenueImpact() {
@@ -582,9 +586,14 @@ function calcRevenueImpact() {
   const cannib = state.revenueModel.cannibalization;
 
   const products = revenueBaseline.map(prod => {
-    const newPrice = getNewPrice(prod.type, prod.trip);
-    const pctChange = (newPrice - prod.price) / prod.price;
-    const newVol = Math.round(prod.vol * (1 + pctChange * e));
+    const newPrice = getNewPrice(prod);
+    let newVol;
+    if (prod.type === 'pass') newVol = prod.vol;
+    else if (prod.type === 'childFree') newVol = Math.round(prod.vol * 1.1);
+    else {
+      const pctChange = (newPrice - prod.price) / prod.price;
+      newVol = Math.round(prod.vol * (1 + pctChange * e));
+    }
     return { ...prod, newPrice, newVol, oldRev: prod.price * prod.vol, newRev: newPrice * newVol };
   });
 
@@ -657,9 +666,13 @@ function renderRevenueImpact() {
   r.products.forEach(p => {
     const priceDelta = p.newPrice - p.price;
     const revDelta = p.newRev - p.oldRev;
-    tableHtml += `<tr>
-      <td>${p.name}</td><td class="r">${fmt(p.price)}</td><td class="r">${fmt(p.newPrice)}</td>
-      <td class="r ${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</td>
+    const isFree = p.type === 'childFree';
+    const isPass = p.type === 'pass';
+    const newPriceLabel = isFree ? '<em style="color:#2A6A2A;">Free*</em>' : fmt(p.newPrice);
+    const deltaLabel = isPass ? '—' : isFree ? `<span class="neg">−${fmt(p.price)}</span>` : `<span class="${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</span>`;
+    tableHtml += `<tr${isFree ? ' style="background:#FFF0F0;"' : isPass ? ' style="opacity:0.5;"' : ''}>
+      <td>${p.name}${isFree ? ' <em style="font-size:9px;color:#888;">free w/ adult</em>' : ''}</td>
+      <td class="r">${fmt(p.price)}</td><td class="r">${newPriceLabel}</td><td class="r">${deltaLabel}</td>
       <td class="r">${fmtK(p.vol)}</td><td class="r">${fmtK(p.newVol)}</td>
       <td class="r ${clsPN(revDelta)}">${revDelta >= 0 ? '+' : ''}${fmtM(revDelta)}</td></tr>`;
   });
