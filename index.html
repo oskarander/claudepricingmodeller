@@ -641,16 +641,33 @@ function renderRevenueImpact() {
   const oldRPT = r.oldVol > 0 ? Math.round(r.oldRev / r.oldVol) : 0;
   const newRPT = r.newVol > 0 ? Math.round(r.newRev / r.newVol) : 0;
 
+  const elDesc = Math.abs(el) <= 0.2 ? 'Low sensitivity — travellers are loyal regardless of price'
+    : Math.abs(el) <= 0.5 ? 'Moderate — some travellers switch to alternatives when prices change'
+    : 'High sensitivity — travellers are very price-conscious';
+  const cnDesc = cn <= 0.2 ? 'Most campaign sales are genuinely new travellers'
+    : cn <= 0.5 ? 'A mix — some would have bought full-price tickets anyway'
+    : 'Most campaign buyers would have paid full price — limited uplift';
+
   $('rev-sliders').innerHTML = `
-    <div class="rev-slider-row">
-      <span class="rev-slider-label">Price elasticity</span>
-      <input type="range" min="-0.8" max="-0.05" step="0.05" value="${el}" oninput="updateElasticity(this.value)">
-      <span class="rev-slider-value">${el.toFixed(2)}</span>
+    <div style="margin-bottom:14px;">
+      <div class="rev-slider-row">
+        <span class="rev-slider-label">Price elasticity</span>
+        <input type="range" min="-0.8" max="-0.05" step="0.05" value="${el}" oninput="updateElasticity(this.value)">
+        <span class="rev-slider-value">${el.toFixed(2)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">
+        How much does demand drop when prices rise? A value of ${el.toFixed(2)} means a 10% price increase leads to a ${Math.abs(el * 10).toFixed(0)}% drop in volume. <strong style="color:var(--dark-bg);">${elDesc}.</strong>
+      </div>
     </div>
-    <div class="rev-slider-row">
-      <span class="rev-slider-label">Campaign cannibalization</span>
-      <input type="range" min="0" max="0.9" step="0.05" value="${cn}" oninput="updateCannibalization(this.value)">
-      <span class="rev-slider-value">${Math.round(cn * 100)}%</span>
+    <div>
+      <div class="rev-slider-row">
+        <span class="rev-slider-label">Campaign cannibalization</span>
+        <input type="range" min="0" max="0.9" step="0.05" value="${cn}" oninput="updateCannibalization(this.value)">
+        <span class="rev-slider-value">${Math.round(cn * 100)}%</span>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">
+        Of all Early Bird and Summer Campaign sales, how many are people who would have bought a full-price adult ticket instead? At ${Math.round(cn * 100)}%, <strong style="color:var(--dark-bg);">${cnDesc.toLowerCase()}.</strong>
+      </div>
     </div>`;
 
   $('rev-summary').innerHTML = `<div class="rev-summary">
