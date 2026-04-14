@@ -60,6 +60,9 @@
   .passenger-row.summer .pax-price { color: #5C2D00; }
   .passenger-row.summer .pax-age { color: #8A4A00; }
   .passenger-row.summer .pax-btn.enabled { background: var(--dark-bg); color: #F5A623; }
+  .summer-strip { background: linear-gradient(135deg, #FF8C00, #FFB347); padding: 10px 14px; display: none; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.08); }
+  .summer-strip.active { display: flex; }
+  .summer-strip-text { font-size: 13px; font-weight: 700; color: white; }
   .campaign-date-row { margin: 0 -12px; padding: 2px 12px 16px; }
   .campaign-date-row.earlybird { background: #FFFCE8; }
   .campaign-date-row.summer { background: #FFF4E8; }
@@ -198,6 +201,10 @@
               </button>
             </div>
           </div>
+          <div class="summer-strip" id="summer-strip">
+            <span style="font-size:18px;">☀️</span>
+            <span class="summer-strip-text" id="summer-strip-text"></span>
+          </div>
           <div class="passenger-list" id="passenger-list"></div>
         </div>
       </div>
@@ -298,10 +305,6 @@ const passengerConfig = [
         const r = state.pricing.earlybirdDays - daysUntilTravel();
         return `${r} day${r !== 1 ? 's' : ''} short`;
       }}},
-  { type:'summerCampaign', label:'Summer Campaign', age:'Travel: 1 Jul – 31 Jul',
-    campaign: { feature:'summerCampaign', rowClass:'summer', dateKey:'summerDate',
-      validate: () => state.summerDate && new Date(state.summerDate).getMonth() === 6,
-      statusText: (valid, hasDate) => !hasDate ? '' : valid ? 'In July ✓' : 'Not in July' }},
   { type:'adult',     label:'Adult',     age:'26–65 years' },
   { type:'pensioner', label:'Pensioner', age:'65+ years' },
   { type:'youth',     label:'Youth',     age:'18–25 years' },
@@ -311,6 +314,9 @@ const passengerConfig = [
 const campaignTypes = passengerConfig.filter(c => c.campaign);
 const paxTypes  = passengerConfig.map(c => c.type);
 const paxLabels = Object.fromEntries(passengerConfig.map(c => [c.type, c.label]));
+const priceTypes = [...paxTypes.filter(t => t !== 'adult'), 'summerCampaign', 'adult'];
+const priceLabels = { ...paxLabels, summerCampaign:'Summer Campaign' };
+function isSummerActive() { return state.features.summerCampaign; }
 
 const state = {
   tripType: 'oneWay',
@@ -322,7 +328,7 @@ const state = {
     roundTripDiscount: 10,
     earlybirdDays: 14,
     oneWay: {
-      adult:340, earlyBird:170, summerCampaign:170, pensioner:170, youth:170, child:170,
+      adult:340, earlyBird:170, summerCampaign:190, pensioner:170, youth:170, child:170,
       groups: { 2:510, 3:680, 4:850, 5:1020, 6:1190, 7:1360, 8:1530 }
     }
   },
@@ -369,6 +375,7 @@ function updateGroupPrice(size, v) { state.pricing.oneWay.groups[size] = Number(
 function updateDate(key, v) { state[key] = v || null; render(); }
 function toggleFeature(name) {
   state.features[name] = !state.features[name];
+  if (name === 'summerCampaign' && !state.features.summerCampaign) state.summerDate = null;
   const cfg = campaignTypes.find(c => c.campaign.feature === name);
   if (cfg && !state.features[name]) { state.passengers[cfg.type] = 0; state[cfg.campaign.dateKey] = null; }
   render();
@@ -393,6 +400,7 @@ function applyGroupPricing(n) {
     else if (c >= 2) { total += g[c]; c = 0; }
     else { total += state.pricing.oneWay.adult; c -= 1; }
   }
+  if (isSummerActive() && n >= 1) total -= (state.pricing.oneWay.adult - state.pricing.oneWay.summerCampaign);
   return total;
 }
 
@@ -472,7 +480,12 @@ function renderBreakdown() {
     <div class="breakdown-total-row"><span class="breakdown-total-label">Total</span><span class="breakdown-total-value">${fmt(total)} SEK</span></div></div>`;
 }
 
-function render() { renderFeatureToggles(); renderToggle(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); renderRevenueImpact(); }
+function renderSummerStrip() {
+  const strip = $('summer-strip');
+  if (isSummerActive()) { strip.classList.add('active'); $('summer-strip-text').textContent = `Summer Campaign — Adults from ${state.pricing.oneWay.summerCampaign} SEK`; }
+  else strip.classList.remove('active');
+}
+function render() { renderFeatureToggles(); renderToggle(); renderSummerStrip(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); renderRevenueImpact(); }
 
 const featureToggleIds = { returnTripDiscount:'feat-rt-discount', earlyBird:'feat-early-bird', summerCampaign:'feat-summer-campaign' };
 function renderFeatureToggles() {
@@ -506,12 +519,26 @@ function buildDateRow(cfg, count) {
     </div></div>`;
 }
 
+function buildSummerDateRow() {
+  if (!isSummerActive()) return '';
+  const dateVal = state.summerDate, valid = dateVal && new Date(dateVal).getMonth() === 6, hasDate = dateVal !== null;
+  const cls = hasDate ? (valid ? 'valid' : 'invalid') : '';
+  const statusText = !hasDate ? '' : valid ? 'In July ✓' : 'Not in July';
+  return `<div class="campaign-date-row summer">
+    <div class="eb-date-heading">When are you travelling?</div>
+    <div class="eb-date-inner ${cls}">
+      <input type="date" class="eb-date-input" value="${dateVal || ''}" min="${todayStr()}" onchange="updateDate('summerDate',this.value)" onclick="this.showPicker && this.showPicker()">
+      ${hasDate ? `<span class="eb-date-status ${cls}">${statusText}</span>` : ''}
+    </div></div>`;
+}
+
 function renderPassengers() {
   const paying = hasPayingAdult();
   $('passenger-list').innerHTML = passengerConfig.map(cfg => {
     if (cfg.campaign && !state.features[cfg.campaign.feature]) return '';
     const count = state.passengers[cfg.type], prices = getDisplayPrices(cfg.type, count);
     const isFree = cfg.type === 'child' && paying && count > 0, minusOK = count > 0;
+    const summer = cfg.type === 'adult' && isSummerActive();
     let priceHtml = '';
     if (isFree) {
       const orig = prices.original || prices.current;
@@ -523,19 +550,22 @@ function renderPassengers() {
       priceHtml += `<span class="pax-price">${fmt(prices.current)} SEK</span>`;
     }
     const hint = cfg.type === 'adult' ? `<div class="pax-adult-hint"><strong>${state.pricing.oneWay.groups[2] - state.pricing.oneWay.adult} SEK</strong> each additional adult</div>` : '';
-    const rowClass = cfg.campaign ? ` campaign-type ${cfg.campaign.rowClass}` : '';
+    let rowClass = cfg.campaign ? ` campaign-type ${cfg.campaign.rowClass}` : '';
+    if (summer) rowClass = ' campaign-type summer';
+    const label = summer ? 'Adult ☀️' : cfg.label;
+    const age = summer ? 'Summer Campaign · 1 Jul – 31 Jul' : cfg.age;
     return `<div class="passenger-row${rowClass}">
       <div class="pax-info">
-        <div class="pax-name">${cfg.label}</div>
+        <div class="pax-name">${label}</div>
         <div class="pax-price-line">${priceHtml}</div>
-        <div class="pax-age">${cfg.age}</div>${hint}
+        <div class="pax-age">${age}</div>${hint}
         ${cfg.note ? `<div class="pax-note">${cfg.note}</div>` : ''}
       </div>
       <div class="pax-controls">
         <button class="pax-btn ${minusOK ? 'enabled' : 'disabled'}" onclick="updatePassenger('${cfg.type}',-1)" ${minusOK ? '' : 'disabled'}>${SVG_MINUS}</button>
         <span class="pax-count">${count}</span>
         <button class="pax-btn enabled" onclick="updatePassenger('${cfg.type}',1)">${SVG_PLUS}</button>
-      </div></div>${buildDateRow(cfg, count)}`;
+      </div></div>${buildDateRow(cfg, count)}${summer ? buildSummerDateRow() : ''}`;
   }).join('');
 }
 
@@ -552,8 +582,8 @@ function renderEditor() {
   $('discount-slider').value = disc;
   $('discount-label').textContent = `${disc}%`;
   $('rt-discount-text').textContent = disc;
-  $('editor-base').innerHTML = paxTypes.map(t => `<div class="price-field">
-    <label>${paxLabels[t]}</label>
+  $('editor-base').innerHTML = priceTypes.map(t => `<div class="price-field">
+    <label>${priceLabels[t] || t}</label>
     <input type="number" value="${state.pricing.oneWay[t]}" onchange="updateBasePrice('${t}',this.value)" oninput="updateBasePrice('${t}',this.value)">
     <div class="coupon-tag">1 coupon</div></div>`).join('');
   $('editor-groups').innerHTML = groupSizes.map(s => `<div class="price-field">
@@ -564,8 +594,8 @@ function renderEditor() {
 
 function renderCalcPrices() {
   const calcRT = v => fmt(Math.round(v * 2 * (1 - state.pricing.roundTripDiscount / 100)));
-  $('calc-base').innerHTML = paxTypes.map(t => `<div class="price-field">
-    <label class="green">${paxLabels[t]}</label>
+  $('calc-base').innerHTML = priceTypes.map(t => `<div class="price-field">
+    <label class="green">${priceLabels[t] || t}</label>
     <div class="calc-value">${calcRT(state.pricing.oneWay[t])} SEK</div>
     <div class="coupon-tag green">2 coupons</div></div>`).join('');
   $('calc-groups').innerHTML = groupSizes.map(s => `<div class="price-field">
