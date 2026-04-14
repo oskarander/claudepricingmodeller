@@ -60,9 +60,6 @@
   .passenger-row.summer .pax-price { color: #5C2D00; }
   .passenger-row.summer .pax-age { color: #8A4A00; }
   .passenger-row.summer .pax-btn.enabled { background: var(--dark-bg); color: #F5A623; }
-  .summer-strip { background: linear-gradient(135deg, #FF8C00, #FFB347); padding: 10px 14px; display: none; align-items: center; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.08); }
-  .summer-strip.active { display: flex; }
-  .summer-strip-text { font-size: 13px; font-weight: 700; color: white; }
   .campaign-date-row { margin: 0 -12px; padding: 2px 12px 16px; }
   .campaign-date-row.earlybird { background: #FFFCE8; }
   .campaign-date-row.summer { background: #FFF4E8; }
@@ -201,10 +198,6 @@
               </button>
             </div>
           </div>
-          <div class="summer-strip" id="summer-strip">
-            <span style="font-size:18px;">☀️</span>
-            <span class="summer-strip-text" id="summer-strip-text"></span>
-          </div>
           <div class="passenger-list" id="passenger-list"></div>
         </div>
       </div>
@@ -215,7 +208,7 @@
         </button>
         <div class="price-breakdown" id="price-breakdown"></div>
         <div class="checkout-total">
-          <div class="checkout-total-amount" id="total-display">340 SEK</div>
+          <div class="checkout-total-amount" id="total-display">0 SEK</div>
           <div class="checkout-savings" id="savings-display" style="display:none;"></div>
         </div>
         <button class="checkout-btn">Checkout</button>
@@ -320,7 +313,7 @@ function isSummerActive() { return state.features.summerCampaign; }
 
 const state = {
   tripType: 'oneWay',
-  passengers: Object.fromEntries(paxTypes.map(t => [t, t === 'adult' ? 1 : 0])),
+  passengers: Object.fromEntries(paxTypes.map(t => [t, 0])),
   travelDate: null,
   summerDate: null,
   features: { returnTripDiscount: true, earlyBird: true, summerCampaign: true },
@@ -480,12 +473,7 @@ function renderBreakdown() {
     <div class="breakdown-total-row"><span class="breakdown-total-label">Total</span><span class="breakdown-total-value">${fmt(total)} SEK</span></div></div>`;
 }
 
-function renderSummerStrip() {
-  const strip = $('summer-strip');
-  if (isSummerActive()) { strip.classList.add('active'); $('summer-strip-text').textContent = `Summer Campaign — Adults from ${state.pricing.oneWay.summerCampaign} SEK`; }
-  else strip.classList.remove('active');
-}
-function render() { renderFeatureToggles(); renderToggle(); renderSummerStrip(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); renderRevenueImpact(); }
+function render() { renderFeatureToggles(); renderToggle(); renderPassengers(); renderFooter(); renderEditor(); renderCalcPrices(); renderRevenueImpact(); }
 
 const featureToggleIds = { returnTripDiscount:'feat-rt-discount', earlyBird:'feat-early-bird', summerCampaign:'feat-summer-campaign' };
 function renderFeatureToggles() {
@@ -552,7 +540,7 @@ function renderPassengers() {
     const hint = cfg.type === 'adult' ? `<div class="pax-adult-hint"><strong>${state.pricing.oneWay.groups[2] - state.pricing.oneWay.adult} SEK</strong> each additional adult</div>` : '';
     let rowClass = cfg.campaign ? ` campaign-type ${cfg.campaign.rowClass}` : '';
     if (summer) rowClass = ' campaign-type summer';
-    const label = summer ? 'Adult ☀️' : cfg.label;
+    const label = summer ? 'Adult – Summer Campaign' : cfg.label;
     const age = summer ? 'Summer Campaign · 1 Jul – 31 Jul' : cfg.age;
     return `<div class="passenger-row${rowClass}">
       <div class="pax-info">
