@@ -267,7 +267,7 @@
     </div>
     <div class="config-section revenue-impact">
       <div class="section-title amber">Revenue Impact Estimate <span class="placeholder-badge">Placeholder data</span></div>
-      <div class="section-desc amber">Projected annual effect of the new pricing model vs current (2025 baseline ~800M SEK). Adjust elasticity and cannibalization assumptions.</div>
+      <div class="section-desc amber"></div>
       <div id="rev-sliders"></div>
       <div id="rev-summary"></div>
       <button class="rev-detail-toggle" id="rev-detail-btn" onclick="toggleRevDetail()">
@@ -323,39 +323,29 @@ const state = {
       groups: { 2:510, 3:680, 4:850, 5:1020, 6:1190, 7:1360, 8:1530 }
     }
   },
-  revenueModel: { elasticity: -0.3, cannibalization: 0.4 }
+  revenueModel: { cannibalization: 0.4, totalRevenueGoal: 500, rtShareIncrease: 10 }
 };
 
 const revenueBaseline = [
-  { name:'Vuxen enkel',           type:'adult',     trip:'ow', price:340, vol:570000 },
-  { name:'Vuxen tur & retur',     type:'adult',     trip:'rt', price:640, vol:345000 },
-  { name:'Barn/Ungdom enkel',     type:'youth',     trip:'ow', price:160, vol:95000 },
-  { name:'Ungdom tur & retur',    type:'youth',     trip:'rt', price:320, vol:70000 },
-  { name:'Pensionär enkel',      type:'pensioner', trip:'ow', price:210, vol:90000 },
-  { name:'Pensionär tur & retur',type:'pensioner', trip:'rt', price:420, vol:65000 },
-  { name:'2 för',    type:'group', trip:'ow', price:460,  vol:40000, g:2 },
-  { name:'3 för',    type:'group', trip:'ow', price:580,  vol:15000, g:3 },
-  { name:'4 för',    type:'group', trip:'ow', price:700,  vol:10000, g:4 },
-  { name:'5 för',    type:'group', trip:'ow', price:820,  vol:5000,  g:5 },
-  { name:'6 för',    type:'group', trip:'ow', price:940,  vol:2500,  g:6 },
-  { name:'7 för',    type:'group', trip:'ow', price:1060, vol:1200,  g:7 },
-  { name:'8 för',    type:'group', trip:'ow', price:1180, vol:600,   g:8 },
-  { name:'2 för, Retur', type:'group', trip:'rt', price:920,  vol:30000, g:2 },
-  { name:'3 för, Retur', type:'group', trip:'rt', price:1160, vol:12000, g:3 },
-  { name:'4 för, Retur', type:'group', trip:'rt', price:1400, vol:7500,  g:4 },
-  { name:'5 för, Retur', type:'group', trip:'rt', price:1640, vol:3500,  g:5 },
-  { name:'6 för, Retur', type:'group', trip:'rt', price:1880, vol:1800,  g:6 },
-  { name:'7 för, Retur', type:'group', trip:'rt', price:2120, vol:900,   g:7 },
-  { name:'8 för, Retur', type:'group', trip:'rt', price:2360, vol:450,   g:8 },
-  { name:'Resepott 12 resor',    type:'pass', trip:'ow', price:3670, vol:18000 },
-  { name:'Resepott 24 resor',    type:'pass', trip:'ow', price:6530, vol:9500 },
-  { name:'Personalkort 30 dagar',type:'pass', trip:'ow', price:1580, vol:22000 },
-  { name:'Personalkort 20 resor',type:'pass', trip:'ow', price:1460, vol:6500 },
-];
-
-const campaignEstimates = [
-  { name:'Early Bird', feature:'earlyBird', type:'earlyBird', estVol:80000 },
-  { name:'Summer Campaign', feature:'summerCampaign', type:'summerCampaign', estVol:60000 },
+  { name:'Adult one way',         type:'adult',     trip:'ow', price:340, share:23.41 },
+  { name:'2 for',                 type:'group', trip:'ow', price:460,  share:18.36, g:2 },
+  { name:'Adult round trip',      type:'adult',     trip:'rt', price:640, share:15.23 },
+  { name:'2 for, Return',         type:'group', trip:'rt', price:920,  share:12.16, g:2 },
+  { name:'Child/Youth one way',   type:'youth',     trip:'ow', price:160, share:12.13 },
+  { name:'Pensioner one way',     type:'pensioner', trip:'ow', price:210, share:2.97 },
+  { name:'3 for',                 type:'group', trip:'ow', price:580,  share:2.64, g:3 },
+  { name:'Pensioner round trip',  type:'pensioner', trip:'rt', price:420, share:2.13 },
+  { name:'Child/Youth round trip', type:'youth',    trip:'rt', price:320, share:1.93 },
+  { name:'3 for, Return',         type:'group', trip:'rt', price:1160, share:1.82, g:3 },
+  { name:'Travel Pass, 24 trips', type:'pass', trip:'ow', price:6530, share:1.56 },
+  { name:'4 for',                 type:'group', trip:'ow', price:700,  share:1.42, g:4 },
+  { name:'4 for, Return',         type:'group', trip:'rt', price:1400, share:1.06, g:4 },
+  { name:'Travel Pass, 12 trips', type:'pass', trip:'ow', price:3670, share:0.69 },
+  { name:'5 for, Return',         type:'group', trip:'rt', price:1640, share:0.48, g:5 },
+  { name:'5 for',                 type:'group', trip:'ow', price:820,  share:0.46, g:5 },
+  { name:'6 for',                 type:'group', trip:'ow', price:940,  share:0.41, g:6 },
+  { name:'8 for, Return',         type:'group', trip:'rt', price:2360, share:0.30, g:8 },
+  { name:'7 for',                 type:'group', trip:'ow', price:1060, share:0.13, g:7 },
 ];
 
 function setTripType(t) { state.tripType = t; render(); }
@@ -580,6 +570,8 @@ function renderCalcPrices() {
 
 function updateElasticity(v) { state.revenueModel.elasticity = Number(v); render(); }
 function updateCannibalization(v) { state.revenueModel.cannibalization = Number(v); render(); }
+function updateRevenueGoal(v) { state.revenueModel.totalRevenueGoal = Number(v); render(); }
+function updateRtShareIncrease(v) { state.revenueModel.rtShareIncrease = Number(v); render(); }
 
 let revDetailOpen = false;
 function toggleRevDetail() {
@@ -597,39 +589,44 @@ function getNewPrice(prod) {
 }
 
 function calcRevenueImpact() {
-  const e = state.revenueModel.elasticity;
-  const cannib = state.revenueModel.cannibalization;
+  const totalRevenueM = state.revenueModel.totalRevenueGoal * 1e6;
+  const rtBoost = state.revenueModel.rtShareIncrease / 100;
+
+  // Calculate adjusted shares: RT products gain share, OW products lose proportionally
+  const totalRtShare = revenueBaseline.filter(p => p.trip === 'rt').reduce((s, p) => s + p.share, 0);
+  const totalOwShare = revenueBaseline.filter(p => p.trip === 'ow' && p.type !== 'pass').reduce((s, p) => s + p.share, 0);
 
   const products = revenueBaseline.map(prod => {
-    const newPrice = getNewPrice(prod);
-    let newVol;
-    if (prod.type === 'pass') newVol = prod.vol;
-    else {
-      const pctChange = (newPrice - prod.price) / prod.price;
-      newVol = Math.round(prod.vol * (1 + pctChange * e));
+    let adjustedShare = prod.share;
+    if (prod.trip === 'rt') {
+      // RT products gain proportionally to their share of total RT
+      adjustedShare = prod.share + (prod.share / totalRtShare) * totalRtShare * rtBoost;
+    } else if (prod.trip === 'ow' && prod.type !== 'pass') {
+      // OW products lose proportionally to their share of total OW
+      adjustedShare = prod.share - (prod.share / totalOwShare) * totalRtShare * rtBoost;
     }
-    return { ...prod, newPrice, newVol, oldRev: prod.price * prod.vol, newRev: newPrice * newVol };
-  });
 
-  const campaigns = campaignEstimates.filter(c => state.features[c.feature]).map(c => {
-    const price = state.pricing.oneWay[c.type];
-    const fullPrice = state.pricing.oneWay.adult;
-    const netNew = Math.round(c.estVol * (1 - cannib));
-    const netRev = c.estVol * price - c.estVol * cannib * fullPrice;
-    return { ...c, price, netNew, netRev };
+    const oldRev = (prod.share / 100) * totalRevenueM;
+    const newShare = adjustedShare / 100;
+    const newPrice = getNewPrice(prod);
+    const newRev = newPrice * Math.round(newShare * totalRevenueM / prod.price);
+
+    return {
+      ...prod,
+      adjustedShare,
+      newPrice,
+      oldRev,
+      newRev,
+      revDelta: newRev - oldRev
+    };
   });
 
   const oldRev = products.reduce((s, p) => s + p.oldRev, 0);
-  const newProdRev = products.reduce((s, p) => s + p.newRev, 0);
-  const campRev = campaigns.reduce((s, c) => s + c.netRev, 0);
-  const oldVol = products.reduce((s, p) => s + p.vol, 0);
-  const newProdVol = products.reduce((s, p) => s + p.newVol, 0);
-  const campVol = campaigns.reduce((s, c) => s + c.netNew, 0);
+  const newRev = products.reduce((s, p) => s + p.newRev, 0);
 
   return {
-    products, campaigns,
-    oldRev, newRev: newProdRev + campRev, revDelta: (newProdRev - oldRev) + campRev,
-    oldVol, newVol: newProdVol + campVol, volDelta: (newProdVol - oldVol) + campVol
+    products,
+    oldRev, newRev, revDelta: newRev - oldRev
   };
 }
 
@@ -640,37 +637,28 @@ const clsPN = n => n >= 0 ? 'pos' : 'neg';
 
 function renderRevenueImpact() {
   const r = calcRevenueImpact();
-  const el = state.revenueModel.elasticity;
-  const cn = state.revenueModel.cannibalization;
-  const oldRPT = r.oldVol > 0 ? Math.round(r.oldRev / r.oldVol) : 0;
-  const newRPT = r.newVol > 0 ? Math.round(r.newRev / r.newVol) : 0;
-
-  const elDesc = Math.abs(el) <= 0.2 ? 'Low sensitivity — travellers are loyal regardless of price'
-    : Math.abs(el) <= 0.5 ? 'Moderate — some travellers switch to alternatives when prices change'
-    : 'High sensitivity — travellers are very price-conscious';
-  const cnDesc = cn <= 0.2 ? 'Most campaign sales are genuinely new travellers'
-    : cn <= 0.5 ? 'A mix — some would have bought full-price tickets anyway'
-    : 'Most campaign buyers would have paid full price — limited uplift';
+  const rg = state.revenueModel.totalRevenueGoal;
+  const rtInc = state.revenueModel.rtShareIncrease;
 
   $('rev-sliders').innerHTML = `
     <div style="margin-bottom:14px;">
       <div class="rev-slider-row">
-        <span class="rev-slider-label">Price elasticity</span>
-        <input type="range" min="-0.8" max="-0.05" step="0.05" value="${el}" oninput="updateElasticity(this.value)">
-        <span class="rev-slider-value">${el.toFixed(2)}</span>
+        <span class="rev-slider-label">Total revenue goal</span>
+        <input type="number" min="100" max="2000" step="50" value="${rg}" onchange="updateRevenueGoal(this.value)" oninput="updateRevenueGoal(this.value)" style="width:80px;padding:6px;border:1px solid var(--border-light);border-radius:6px;font-family:inherit;font-size:13px;">
+        <span class="rev-slider-value">M SEK</span>
       </div>
       <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">
-        How much does demand drop when prices rise? A value of ${el.toFixed(2)} means a 10% price increase leads to a ${Math.abs(el * 10).toFixed(0)}% drop in volume. <strong style="color:var(--dark-bg);">${elDesc}.</strong>
+        Baseline total annual revenue. Product revenues are calculated proportionally from their market shares.
       </div>
     </div>
-    <div>
+    <div style="margin-bottom:14px;">
       <div class="rev-slider-row">
-        <span class="rev-slider-label">Campaign cannibalization</span>
-        <input type="range" min="0" max="0.9" step="0.05" value="${cn}" oninput="updateCannibalization(this.value)">
-        <span class="rev-slider-value">${Math.round(cn * 100)}%</span>
+        <span class="rev-slider-label">Expected return trip share increase</span>
+        <input type="range" min="0" max="50" step="1" value="${rtInc}" oninput="updateRtShareIncrease(this.value)">
+        <span class="rev-slider-value">${rtInc}%</span>
       </div>
       <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">
-        Of all Early Bird and Summer Campaign sales, how many are people who would have bought a full-price adult ticket instead? At ${Math.round(cn * 100)}%, <strong style="color:var(--dark-bg);">${cnDesc.toLowerCase()}.</strong>
+        The new pricing model incentivises return trips with a ${state.pricing.roundTripDiscount}% discount. At ${rtInc}%, return trip products gain ${rtInc}% more share while one-way products decrease proportionally.
       </div>
     </div>`;
 
@@ -680,20 +668,10 @@ function renderRevenueImpact() {
       <div class="rev-card-label">Revenue impact</div>
       <div class="rev-card-sub">${fmtM(r.oldRev)} → ${fmtM(r.newRev)} (${fmtPct(r.revDelta, r.oldRev)})</div>
     </div>
-    <div class="rev-card">
-      <div class="rev-card-value ${clsPN(r.volDelta)}">${r.volDelta >= 0 ? '+' : ''}${fmtK(r.volDelta)}</div>
-      <div class="rev-card-label">Traveller impact</div>
-      <div class="rev-card-sub">${fmtK(r.oldVol)} → ${fmtK(r.newVol)} (${fmtPct(r.volDelta, r.oldVol)})</div>
-    </div>
-    <div class="rev-card">
-      <div class="rev-card-value ${clsPN(newRPT - oldRPT)}">${oldRPT} → ${newRPT} SEK</div>
-      <div class="rev-card-label">Revenue / traveller</div>
-      <div class="rev-card-sub">${fmtPct(newRPT - oldRPT, oldRPT)} per journey</div>
-    </div>
   </div>`;
 
   let tableHtml = `<table class="rev-table">
-    <tr><th>Product</th><th class="r">Current price</th><th class="r">New price</th><th class="r">Δ Price</th><th class="r">Vol (current)</th><th class="r">Vol (new)</th><th class="r">Δ Rev</th></tr>`;
+    <tr><th>Product</th><th class="r">Share %</th><th class="r">Current price</th><th class="r">New price</th><th class="r">Δ Price</th><th class="r">Δ Revenue</th></tr>`;
   r.products.forEach(p => {
     const priceDelta = p.newPrice - p.price;
     const revDelta = p.newRev - p.oldRev;
@@ -701,20 +679,13 @@ function renderRevenueImpact() {
     const deltaLabel = isPass ? '—' : `<span class="${clsPN(priceDelta)}">${priceDelta >= 0 ? '+' : ''}${fmt(priceDelta)}</span>`;
     tableHtml += `<tr${isPass ? ' style="opacity:0.5;"' : ''}>
       <td>${p.name}</td>
+      <td class="r">${p.share.toFixed(2)}%</td>
       <td class="r">${fmt(p.price)}</td><td class="r">${fmt(p.newPrice)}</td><td class="r">${deltaLabel}</td>
-      <td class="r">${fmtK(p.vol)}</td><td class="r">${fmtK(p.newVol)}</td>
       <td class="r ${clsPN(revDelta)}">${revDelta >= 0 ? '+' : ''}${fmtM(revDelta)}</td></tr>`;
   });
-  r.campaigns.forEach(c => {
-    tableHtml += `<tr class="campaign-row">
-      <td>${c.name} (new)</td><td class="r">—</td><td class="r">${fmt(c.price)}</td>
-      <td class="r">—</td><td class="r">+${fmtK(c.netNew)}</td><td class="r">+${fmtK(c.netNew)}</td>
-      <td class="r ${clsPN(c.netRev)}">${c.netRev >= 0 ? '+' : ''}${fmtM(c.netRev)}</td></tr>`;
-  });
   tableHtml += `<tr class="total-row">
-    <td>Total</td><td class="r">${fmtM(r.oldRev)}</td><td class="r">${fmtM(r.newRev)}</td>
+    <td>Total</td><td class="r">100%</td><td class="r">${fmtM(r.oldRev)}</td><td class="r">${fmtM(r.newRev)}</td>
     <td class="r ${clsPN(r.revDelta)}">${r.revDelta >= 0 ? '+' : ''}${fmtM(r.revDelta)}</td>
-    <td class="r">${fmtK(r.oldVol)}</td><td class="r">${fmtK(r.newVol)}</td>
     <td class="r ${clsPN(r.revDelta)}">${fmtPct(r.revDelta, r.oldRev)}</td></tr></table>`;
   $('rev-table-container').innerHTML = tableHtml;
 }
