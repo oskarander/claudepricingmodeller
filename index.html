@@ -368,7 +368,7 @@ function updateGroupPrice(size, v) { state.pricing.oneWay.groups[size] = Number(
 function updateDate(key, v) { state[key] = v || null; render(); }
 function toggleFeature(name) {
   state.features[name] = !state.features[name];
-  if (name === 'summerCampaign' && !state.features.summerCampaign) state.summerDate = null;
+
   const cfg = campaignTypes.find(c => c.campaign.feature === name);
   if (cfg && !state.features[name]) { state.passengers[cfg.type] = 0; state[cfg.campaign.dateKey] = null; }
   render();
@@ -507,18 +507,6 @@ function buildDateRow(cfg, count) {
     </div></div>`;
 }
 
-function buildSummerDateRow() {
-  if (!isSummerActive()) return '';
-  const dateVal = state.summerDate, valid = dateVal && new Date(dateVal).getMonth() === 6, hasDate = dateVal !== null;
-  const cls = hasDate ? (valid ? 'valid' : 'invalid') : '';
-  const statusText = !hasDate ? '' : valid ? 'In July ✓' : 'Not in July';
-  return `<div class="campaign-date-row summer">
-    <div class="eb-date-heading">When are you travelling?</div>
-    <div class="eb-date-inner ${cls}">
-      <input type="date" class="eb-date-input" value="${dateVal || ''}" min="${todayStr()}" onchange="updateDate('summerDate',this.value)" onclick="this.showPicker && this.showPicker()">
-      ${hasDate ? `<span class="eb-date-status ${cls}">${statusText}</span>` : ''}
-    </div></div>`;
-}
 
 function renderPassengers() {
   const paying = hasPayingAdult();
@@ -553,7 +541,7 @@ function renderPassengers() {
         <button class="pax-btn ${minusOK ? 'enabled' : 'disabled'}" onclick="updatePassenger('${cfg.type}',-1)" ${minusOK ? '' : 'disabled'}>${SVG_MINUS}</button>
         <span class="pax-count">${count}</span>
         <button class="pax-btn enabled" onclick="updatePassenger('${cfg.type}',1)">${SVG_PLUS}</button>
-      </div></div>${buildDateRow(cfg, count)}${summer ? buildSummerDateRow() : ''}`;
+      </div></div>${buildDateRow(cfg, count)}`;
   }).join('');
 }
 
