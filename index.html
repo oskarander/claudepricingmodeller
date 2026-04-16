@@ -35,7 +35,7 @@
 }
 body { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--ax-bg); color: var(--ax-text); min-height: 100vh; }
 .layout { display: flex; min-height: 100vh; }
-.panel-left { width: 480px; min-width: 480px; background: #1E1D28; display: flex; align-items: center; justify-content: center; padding: 32px 24px; position: sticky; top: 0; height: 100vh; }
+.panel-left { width: 480px; min-width: 480px; background: #1E1D28; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; position: sticky; top: 0; height: 100vh; }
 .panel-right { flex: 1; background: var(--ax-white); overflow-y: auto; padding: 40px 44px; border-left: 1px solid var(--ax-border); }
 
 /* Phone Frame */
@@ -56,7 +56,6 @@ body { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', He
 .browser-dot.g { background: #28C840; }
 .browser-url { flex: 1; margin-left: 8px; background: rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 10px; font-size: 11px; color: rgba(255,255,255,0.5); font-family: inherit; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .phone-frame.ch-web .phone-scroll { padding-top: 0; }
-.phone-frame.ch-web .channel-selector { padding-top: 44px; }
 
 /* Channel: TVM — kiosk style */
 .phone-frame.ch-tvm { width: 400px; border-radius: 20px; border: 6px solid #222; background: #1a1a24; }
@@ -69,17 +68,17 @@ body { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', He
 .phone-frame.ch-tvm .toggle-btn { font-size: 15px; padding: 13px 0; }
 .phone-frame.ch-tvm .checkout-total-amount { font-size: 34px; }
 .phone-frame.ch-tvm .checkout-btn { font-size: 18px; padding: 18px; border-radius: 12px; }
-.phone-frame.ch-tvm .channel-selector { padding-top: 20px; }
 
 /* Pricing Mode Toggle */
-.pricing-mode-bar { display: flex; align-items: center; gap: 8px; margin: 0 4px 8px; padding: 8px 10px; background: rgba(255,255,255,0.06); border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
-.pricing-mode-toggle { display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 3px; flex: 1; }
-.pricing-mode-btn { flex: 1; padding: 7px 0; border: none; border-radius: 6px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: rgba(255,255,255,0.45); }
-.pricing-mode-btn.active-current { background: var(--ax-white); color: var(--ax-dark); }
+.panel-left-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; max-width: 390px; align-self: center; width: 100%; }
+.pricing-mode-bar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--ax-white); border-radius: 12px; border: 1px solid var(--ax-border); }
+.pricing-mode-toggle { display: flex; background: #F0F0F4; border-radius: 8px; padding: 3px; flex: 1; }
+.pricing-mode-btn { flex: 1; padding: 7px 0; border: none; border-radius: 6px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--ax-text-secondary); }
+.pricing-mode-btn.active-current { background: var(--ax-dark); color: var(--ax-white); }
 .pricing-mode-btn.active-new { background: var(--ax-yellow); color: var(--ax-dark); }
 .pricing-mode-indicator { display: none; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0; }
-.pricing-mode-indicator.current { display: inline-block; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
-.pricing-mode-indicator.new { display: inline-block; background: rgba(254,243,128,0.2); color: var(--ax-yellow); }
+.pricing-mode-indicator.current { display: inline-block; background: #F0F0F4; color: var(--ax-text-secondary); }
+.pricing-mode-indicator.new { display: inline-block; background: rgba(254,243,128,0.3); color: #8A7A00; }
 /* Outline glow on phone frame when viewing current */
 .phone-frame.mode-current { box-shadow: var(--shadow-elevated), 0 0 0 2px rgba(255,255,255,0.25); }
 .phone-frame.mode-new { box-shadow: var(--shadow-elevated), 0 0 0 2px rgba(254,243,128,0.35); }
@@ -89,9 +88,9 @@ body { font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', He
 .tvm-header-logo { font-size: 14px; font-weight: 700; color: var(--ax-yellow); letter-spacing: 1px; text-transform: uppercase; }
 
 /* Channel Selector */
-.channel-selector { display: flex; gap: 4px; padding: 40px 16px 8px; }
-.channel-btn { flex: 1; padding: 6px 0; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; font-family: inherit; font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.2s; }
-.channel-btn.active { background: rgba(254,243,128,0.15); border-color: var(--ax-yellow); color: var(--ax-yellow); }
+.channel-selector { display: flex; gap: 4px; padding: 0; }
+.channel-btn { flex: 1; padding: 8px 0; background: var(--ax-white); border: 1.5px solid var(--ax-border); border-radius: 8px; font-family: inherit; font-size: 11px; font-weight: 700; color: var(--ax-text-secondary); cursor: pointer; transition: all 0.2s; }
+.channel-btn.active { background: var(--ax-dark); border-color: var(--ax-dark); color: var(--ax-white); }
 
 /* Ticket Card */
 .ticket-card { background: var(--ax-white); border-radius: 20px; overflow: hidden; }
@@ -363,6 +362,16 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 <body>
 <div class="layout">
   <div class="panel-left">
+    <div class="panel-left-controls">
+      <div class="channel-selector" id="channel-selector"></div>
+      <div class="pricing-mode-bar" id="pricing-mode-bar">
+        <div class="pricing-mode-toggle">
+          <button class="pricing-mode-btn active-current" id="mode-btn-current" onclick="setPricingMode('current')">Current</button>
+          <button class="pricing-mode-btn" id="mode-btn-new" onclick="setPricingMode('new')">New</button>
+        </div>
+        <span class="pricing-mode-indicator current" id="pricing-mode-indicator">LIVE PRICES</span>
+      </div>
+    </div>
     <div class="phone-frame" id="phone-frame">
       <div class="browser-bar">
         <span class="browser-dot r"></span><span class="browser-dot y"></span><span class="browser-dot g"></span>
@@ -371,15 +380,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
       <div class="tvm-header">
         <span class="tvm-header-logo">Arlanda Express &mdash; Purchase Ticket</span>
       </div>
-      <div class="phone-scroll" style="padding-top:0;">
-        <div class="channel-selector" id="channel-selector"></div>
-        <div class="pricing-mode-bar" id="pricing-mode-bar">
-          <div class="pricing-mode-toggle">
-            <button class="pricing-mode-btn active-current" id="mode-btn-current" onclick="setPricingMode('current')">Current</button>
-            <button class="pricing-mode-btn" id="mode-btn-new" onclick="setPricingMode('new')">New</button>
-          </div>
-          <span class="pricing-mode-indicator current" id="pricing-mode-indicator">LIVE PRICES</span>
-        </div>
+      <div class="phone-scroll" style="padding-top:40px;">
         <div style="padding: 4px 16px 16px;">
           <div style="font-size:22px; font-weight:800; color:var(--ax-yellow); line-height:1.2;">How many will travel?</div>
         </div>
@@ -554,7 +555,7 @@ const passengerConfig = [
 const campaignTypes = passengerConfig.filter(c => c.campaign);
 const paxTypes = passengerConfig.map(c => c.type);
 const paxLabels = Object.fromEntries(passengerConfig.map(c => [c.type, c.label]));
-const priceTypes = ['earlyBird','summerCampaign','adult','senior','youth','child','travelpass12','travelpass24','staffPass30','staffPass20'];
+const priceTypes = ['adult','senior','youth','child','travelpass12','travelpass24','staffPass30','staffPass20'];
 const priceLabels = { ...paxLabels, summerCampaign:'Summer Campaign' };
 
 /* ─── State ─── */
@@ -570,7 +571,7 @@ const state = {
   pricing: {
     roundTripDiscount: 10,
     oneWay: {
-      adult:340, earlyBird:170, summerCampaign:190, senior:210, youth:160, child:160,
+      adult:340, senior:210, youth:160, child:160,
       travelpass12:3670, travelpass24:6530, staffPass30:1580, staffPass20:1460,
       groups: { 2:460, 3:580, 4:700, 5:820, 6:940, 7:1060, 8:1180 }
     }
@@ -578,8 +579,8 @@ const state = {
   segment: 'retail',
   b2bDiscount: 15,
   campaigns: [
-    { id: 1, name:'Early Bird', type:'advanceBooking', minDays:14, startDate:'', endDate:'', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:170, enabled:true },
-    { id: 2, name:'Summer Campaign', type:'dateRange', minDays:0, startDate:'2026-07-01', endDate:'2026-07-31', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:190, enabled:true }
+    { id: 1, name:'Early Bird', type:'advanceBooking', minDays:14, startDate:'', endDate:'', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:170, rtPrice:399, enabled:true },
+    { id: 2, name:'Summer Campaign', type:'dateRange', minDays:0, startDate:'2026-07-01', endDate:'2026-07-31', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:190, rtPrice:0, enabled:true }
   ],
   revenueModel: {
     totalRevenueGoal: 500, rtShareIncrease: 10,
@@ -606,11 +607,15 @@ let scenarios = [];
 const baselinePricing = {
   roundTripDiscount: 10,
   oneWay: {
-    adult:340, earlyBird:170, summerCampaign:190, senior:210, youth:160, child:160,
+    adult:340, senior:210, youth:160, child:160,
     travelpass12:3670, travelpass24:6530, staffPass30:1580, staffPass20:1460,
     groups: { 2:460, 3:580, 4:700, 5:820, 6:940, 7:1060, 8:1180 }
   }
 };
+const baselineCampaigns = [
+  { id: 1, name:'Early Bird', discountValue:170, rtPrice:399 },
+  { id: 2, name:'Summer Campaign', discountValue:190, rtPrice:0 }
+];
 const baselineFeatures = {
   returnTripDiscount: true, earlyBird: true, summerCampaign: true,
   travelpass: true, staffPass: true, offPeak: false, b2bPriceLists: false
@@ -666,6 +671,11 @@ function hasPayingAdult() {
 }
 function getEffectivePrice(type) {
   let price = activePricing().oneWay[type];
+  if (price === undefined) {
+    const c = state.campaigns.find(c => (type === 'earlyBird' && c.id === 1) || (type === 'summerCampaign' && c.id === 2));
+    if (c) price = c.discountValue;
+    else price = 0;
+  }
   if (activeFeatures().b2bPriceLists && activeSegment() !== 'retail') {
     price = Math.round(price * (1 - activeB2BDiscount() / 100));
   }
@@ -681,7 +691,7 @@ function applyGroupPricing(n) {
     else if (c >= 2) { total += g[c]; c = 0; }
     else { total += ow.adult; c -= 1; }
   }
-  if (isSummerActive() && n >= 1) total -= (ow.adult - ow.summerCampaign);
+  if (isSummerActive() && n >= 1) { const sc = state.campaigns.find(c => c.id === 2); if (sc) total -= (ow.adult - sc.discountValue); }
   if (activeFeatures().b2bPriceLists && activeSegment() !== 'retail') {
     total = Math.round(total * (1 - activeB2BDiscount() / 100));
   }
@@ -785,13 +795,18 @@ function renderCampaigns() {
         <label><input type="checkbox" ${c.eligible.return?'checked':''} onchange="updateCampaignField(${c.id},'eligible.return',this.checked)"> Return</label>
       </div>
       <div class="campaign-row">
-        <label>Discount</label>
+        <label>OW Price</label>
         <select onchange="updateCampaignField(${c.id},'discountType',this.value)">
           <option value="percentage" ${c.discountType==='percentage'?'selected':''}>Percentage</option>
           <option value="fixed" ${c.discountType==='fixed'?'selected':''}>Fixed price (SEK)</option>
         </select>
         <input type="number" value="${c.discountValue}" min="0" onchange="updateCampaignField(${c.id},'discountValue',Number(this.value))">
         <span style="font-size:12px;font-weight:600;color:#9A5A2A;">${c.discountType==='percentage'?'%':'SEK'}</span>
+      </div>
+      <div class="campaign-row">
+        <label>RT Price</label>
+        <input type="number" value="${c.rtPrice || 0}" min="0" onchange="updateCampaignField(${c.id},'rtPrice',Number(this.value))">
+        <span style="font-size:11px;color:var(--ax-text-secondary);">${c.rtPrice > 0 ? 'Fixed RT (no extra RT discount)' : 'Uses OW×2 minus RT discount'}</span>
       </div>
     </div>
   `).join('');
@@ -963,6 +978,14 @@ const scenarioMeta = {
   campaignNew:      { label:'New Price with Campaigns', short:'New price with\ncampaigns', desc:'Impact of applying campaigns at <strong>new</strong> prices. Isolates the campaign effect after a price change.' }
 };
 
+function getCampaignPrice(campaignId, trip) {
+  const c = state.campaigns.find(c => c.id === campaignId);
+  if (!c) return 0;
+  if (trip === 'rt' && c.rtPrice > 0) return c.rtPrice;
+  const owPrice = c.discountValue;
+  return trip === 'rt' ? Math.round(owPrice * 2 * (1 - state.pricing.roundTripDiscount / 100)) : owPrice;
+}
+
 function calcProdPrice(prod, pricing, rtDisc, applyB2B) {
   if (prod.type === 'pass') {
     let p = prod.basePrice === 6530 ? pricing.oneWay.travelpass24 : pricing.oneWay.travelpass12;
@@ -974,10 +997,9 @@ function calcProdPrice(prod, pricing, rtDisc, applyB2B) {
     if (applyB2B) p = Math.round(p * (1 - state.b2bDiscount / 100));
     return p;
   }
+  if (prod.campaignId) return getCampaignPrice(prod.campaignId, prod.trip);
   let ow;
   if (prod.type === 'group') ow = pricing.oneWay.groups[prod.g];
-  else if (prod.type === 'earlyBird') ow = pricing.oneWay.earlyBird;
-  else if (prod.type === 'summerCampaign') ow = pricing.oneWay.summerCampaign;
   else ow = pricing.oneWay[prod.type] || pricing.oneWay.adult;
   if (applyB2B) ow = Math.round(ow * (1 - state.b2bDiscount / 100));
   return prod.trip === 'rt' ? Math.round(ow * 2 * (1 - rtDisc / 100)) : ow;
@@ -998,13 +1020,15 @@ function buildRevState(pricing, withCampaigns, withRtBoost, applyPricingRtDisc) 
 
   const aOW = revenueBaseline.find(p => p.type === 'adult' && p.trip === 'ow');
   const aRT = revenueBaseline.find(p => p.type === 'adult' && p.trip === 'rt');
-  if (ebU > 0) {
-    if (aOW) prods.push({ name:'Early Bird OW', type:'earlyBird', trip:'ow', price: aOW.price, basePrice: aOW.price, share: aOW.share * ebU, adjShare: aOW.share * ebU, isCampaign: true });
-    if (aRT) prods.push({ name:'Early Bird RT', type:'earlyBird', trip:'rt', price: aRT.price, basePrice: aRT.price, share: aRT.share * ebU, adjShare: aRT.share * ebU, isCampaign: true });
+  const ebCamp = state.campaigns.find(c => c.id === 1);
+  const scCamp = state.campaigns.find(c => c.id === 2);
+  if (ebU > 0 && ebCamp) {
+    if (aOW) prods.push({ name:'Early Bird OW', type:'earlyBird', trip:'ow', price: aOW.price, basePrice: aOW.price, share: aOW.share * ebU, adjShare: aOW.share * ebU, isCampaign: true, campaignId: 1 });
+    if (aRT) prods.push({ name:'Early Bird RT', type:'earlyBird', trip:'rt', price: aRT.price, basePrice: aRT.price, share: aRT.share * ebU, adjShare: aRT.share * ebU, isCampaign: true, campaignId: 1 });
   }
-  if (scU > 0) {
-    if (aOW) prods.push({ name:'Summer Camp. OW', type:'summerCampaign', trip:'ow', price: aOW.price, basePrice: aOW.price, share: aOW.share * scU, adjShare: aOW.share * scU, isCampaign: true });
-    if (aRT) prods.push({ name:'Summer Camp. RT', type:'summerCampaign', trip:'rt', price: aRT.price, basePrice: aRT.price, share: aRT.share * scU, adjShare: aRT.share * scU, isCampaign: true });
+  if (scU > 0 && scCamp) {
+    if (aOW) prods.push({ name:'Summer Camp. OW', type:'summerCampaign', trip:'ow', price: aOW.price, basePrice: aOW.price, share: aOW.share * scU, adjShare: aOW.share * scU, isCampaign: true, campaignId: 2 });
+    if (aRT) prods.push({ name:'Summer Camp. RT', type:'summerCampaign', trip:'rt', price: aRT.price, basePrice: aRT.price, share: aRT.share * scU, adjShare: aRT.share * scU, isCampaign: true, campaignId: 2 });
   }
 
   if (withRtBoost && lv.returnTripDiscount && state.revenueModel.rtShareIncrease > 0) {
