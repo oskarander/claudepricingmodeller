@@ -716,8 +716,7 @@ function getDisplayPrices(type, count) {
     current = actualOW; original = actualOW < rawOW ? rawOW : null;
   } else if (camp && camp.rtPrice > 0) {
     current = active * camp.rtPrice;
-    const rawRT = active * getEffectivePrice('adult') * 2;
-    original = rawRT !== current ? rawRT : null;
+    original = null;
   } else {
     const rtDisc = (camp && !camp.rtDiscountApplies) ? 0 : activeRTDiscount();
     const rawRT = rawOW * 2;
