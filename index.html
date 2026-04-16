@@ -630,7 +630,7 @@ function activePricing() { return pricingMode === 'current' ? baselinePricing : 
 function activeFeatures() { return state.features; }
 function activeSegment() { return state.segment; }
 function activeB2BDiscount() { return state.b2bDiscount; }
-function activeRTDiscount() { return activePricing().roundTripDiscount; }
+function activeRTDiscount() { return activeFeatures().returnTripDiscount ? activePricing().roundTripDiscount : 0; }
 
 /* ─── Core Functions ─── */
 function setPricingMode(m) { pricingMode = m; render(); }
@@ -747,7 +747,7 @@ function calculateTotals() {
   let total = actualOW + standalone, rawTotal = rawOW + standalone;
   if (state.tripType === 'roundTrip') {
     rawTotal = rawOW * 2 + standalone;
-    const disc = activeFeatures().returnTripDiscount ? activeRTDiscount() : 0;
+    const disc = activeRTDiscount();
     // Standard products get the RT discount
     let regularOW = applyGroupPricing(pax.adult);
     regularOW += pax.senior * getEffectivePrice('senior');
