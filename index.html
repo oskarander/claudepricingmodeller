@@ -579,8 +579,8 @@ const state = {
   segment: 'retail',
   b2bDiscount: 15,
   campaigns: [
-    { id: 1, name:'Early Bird', type:'advanceBooking', minDays:14, startDate:'', endDate:'', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:170, rtPrice:399, enabled:true },
-    { id: 2, name:'Summer Campaign', type:'dateRange', minDays:0, startDate:'2026-07-01', endDate:'2026-07-31', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:190, rtPrice:0, enabled:true }
+    { id: 1, name:'Early Bird', type:'advanceBooking', minDays:14, startDate:'', endDate:'', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:170, rtPrice:399, rtDiscountApplies:false, enabled:true },
+    { id: 2, name:'Summer Campaign', type:'dateRange', minDays:0, startDate:'2026-07-01', endDate:'2026-07-31', eligible:{ single:true, return:true }, discountType:'fixed', discountValue:190, rtPrice:0, rtDiscountApplies:false, enabled:true }
   ],
   revenueModel: {
     totalRevenueGoal: 500, rtShareIncrease: 10,
@@ -698,17 +698,28 @@ function applyGroupPricing(n) {
   return total;
 }
 
+function getCampaignForType(type) {
+  if (type === 'earlyBird') return state.campaigns.find(c => c.id === 1);
+  if (type === 'summerCampaign') return state.campaigns.find(c => c.id === 2);
+  return null;
+}
+
 function getDisplayPrices(type, count) {
   const active = count > 0 ? count : 1;
   const ep = getEffectivePrice(type);
   const rawOW = active * ep;
   const actualOW = type === 'adult' ? applyGroupPricing(active) : rawOW;
-  const rtDisc = activeRTDiscount();
   let current, original;
   const cfg = passengerConfig.find(c => c.type === type);
+  const camp = getCampaignForType(type);
   if (state.tripType === 'oneWay' || cfg?.travelpass || cfg?.staffpass) {
     current = actualOW; original = actualOW < rawOW ? rawOW : null;
+  } else if (camp && camp.rtPrice > 0) {
+    current = active * camp.rtPrice;
+    const rawRT = active * getEffectivePrice('adult') * 2;
+    original = rawRT !== current ? rawRT : null;
   } else {
+    const rtDisc = (camp && !camp.rtDiscountApplies) ? 0 : activeRTDiscount();
     const rawRT = rawOW * 2;
     current = Math.round(actualOW * 2 * (1 - rtDisc / 100));
     original = rawRT !== current ? rawRT : null;
@@ -737,7 +748,21 @@ function calculateTotals() {
   if (state.tripType === 'roundTrip') {
     rawTotal = rawOW * 2 + standalone;
     const disc = activeFeatures().returnTripDiscount ? activeRTDiscount() : 0;
-    total = Math.round(actualOW * 2 * (1 - disc / 100)) + standalone;
+    // Standard products get the RT discount
+    let regularOW = applyGroupPricing(pax.adult);
+    regularOW += pax.senior * getEffectivePrice('senior');
+    regularOW += pax.youth * getEffectivePrice('youth');
+    if (!hasPayingAdult()) regularOW += pax.child * getEffectivePrice('child');
+    total = Math.round(regularOW * 2 * (1 - disc / 100));
+    // Campaign products use their own RT logic
+    campaignTypes.forEach(c => {
+      const n = pax[c.type];
+      if (n <= 0) return;
+      const camp = getCampaignForType(c.type);
+      if (camp && camp.rtPrice > 0) { total += n * camp.rtPrice; }
+      else { const campDisc = (camp && !camp.rtDiscountApplies) ? 0 : disc; total += Math.round(n * getEffectivePrice(c.type) * 2 * (1 - campDisc / 100)); }
+    });
+    total += standalone;
   }
   const savings = rawTotal - total;
   return { total, savings, pct: savings > 0 && rawTotal > 0 ? Math.round(savings / rawTotal * 100) : 0 };
@@ -806,7 +831,10 @@ function renderCampaigns() {
       <div class="campaign-row">
         <label>RT Price</label>
         <input type="number" value="${c.rtPrice || 0}" min="0" onchange="updateCampaignField(${c.id},'rtPrice',Number(this.value))">
-        <span style="font-size:11px;color:var(--ax-text-secondary);">${c.rtPrice > 0 ? 'Fixed RT (no extra RT discount)' : 'Uses OW×2 minus RT discount'}</span>
+        <span style="font-size:11px;color:var(--ax-text-secondary);">${c.rtPrice > 0 ? 'Fixed RT price' : 'Uses OW\u00d72'}</span>
+      </div>
+      <div class="campaign-checkbox-row">
+        <label><input type="checkbox" ${c.rtDiscountApplies?'checked':''} onchange="updateCampaignField(${c.id},'rtDiscountApplies',this.checked)"> Apply RT discount (${c.rtPrice > 0 ? 'ignored when fixed RT price is set' : state.pricing.roundTripDiscount + '%'})</label>
       </div>
     </div>
   `).join('');
@@ -983,7 +1011,11 @@ function getCampaignPrice(campaignId, trip) {
   if (!c) return 0;
   if (trip === 'rt' && c.rtPrice > 0) return c.rtPrice;
   const owPrice = c.discountValue;
-  return trip === 'rt' ? Math.round(owPrice * 2 * (1 - state.pricing.roundTripDiscount / 100)) : owPrice;
+  if (trip === 'rt') {
+    const disc = c.rtDiscountApplies ? state.pricing.roundTripDiscount : 0;
+    return Math.round(owPrice * 2 * (1 - disc / 100));
+  }
+  return owPrice;
 }
 
 function calcProdPrice(prod, pricing, rtDisc, applyB2B) {
@@ -1296,9 +1328,10 @@ function renderPassengers() {
     if (cfg.campaign && !feat[cfg.campaign.feature]) return '';
     if (cfg.travelpass && !feat.travelpass) return '';
     if (cfg.staffpass && !feat.staffPass) return '';
-    const count = state.passengers[cfg.type], prices = getDisplayPrices(cfg.type, count);
-    const isFree = cfg.type === 'child' && paying && count > 0, minusOK = count > 0;
+    const count = state.passengers[cfg.type];
     const summer = cfg.type === 'adult' && isSummerActive();
+    const prices = getDisplayPrices(summer ? 'summerCampaign' : cfg.type, count);
+    const isFree = cfg.type === 'child' && paying && count > 0, minusOK = count > 0;
 
     let priceHtml = '';
     if (isFree) {
